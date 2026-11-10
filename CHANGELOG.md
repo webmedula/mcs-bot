@@ -7,6 +7,9 @@
 - Modelos aceitam texto alternativo: `{garantia|informada na descrição do anúncio}`.
 - Voltagem, potência e medidas: a IA só responde com o que estiver no anúncio; senão, passa para uma pessoa.
 - Assinatura padrão: "Atenciosamente, equipe MCS." (como na planilha).
+- **Painel com visual novo e logo da MCS**: topo escuro com o logo, cores da marca, ícone na aba do navegador e o número de pendentes no título da aba. Bolinhas no topo mostram se o ML está conectado, se a IA tem chave e se o envio está ligado.
+- Pendentes: indicadores (pendentes, a mais antiga, tempo de resposta e respostas prontas ativas), filtro por assunto, uma faixa colorida em cada pergunta (verde = resposta pronta, azul = IA, amarelo = precisa de uma pessoa) e um contador de caracteres.
+- Botão **Copiar resposta** enquanto o envio está desligado, para colar no ML à mão. Botão **Sair** no topo.
 
 ## 0.3.0 (2026-11-10)
 

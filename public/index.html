@@ -6,55 +6,91 @@
 <title>MCS Bot · Perguntas</title>
 <style>
   :root {
-    --fundo: #f5f6f8; --cartao: #fff; --texto: #1d2330; --suave: #5d6678; --borda: #e2e5ea;
+    --marca: #ff5400; --marca-escura: #d94700; --marca-clara: #fff1e8;
+    --topo: #17191f; --topo-texto: #c9ccd3;
+    --fundo: #f4f5f7; --cartao: #fff; --texto: #1b1f27; --suave: #5f6673; --borda: #e3e5e9;
     --azul: #2357d9; --azul-claro: #e8eefc; --verde: #1d8a4e; --verde-claro: #e5f5ec;
     --amarelo: #a86b00; --amarelo-claro: #fff4dc; --vermelho: #c0392b; --vermelho-claro: #fdecea;
+    --sombra: 0 1px 2px rgba(16,24,40,.05), 0 1px 3px rgba(16,24,40,.06);
   }
   * { box-sizing: border-box; }
-  body { margin: 0; font: 15px/1.45 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; background: var(--fundo); color: var(--texto); }
-  header { background: var(--cartao); border-bottom: 1px solid var(--borda); padding: 12px 16px; display: flex; gap: 16px; align-items: center; flex-wrap: wrap; position: sticky; top: 0; z-index: 5; }
-  header h1 { font-size: 17px; margin: 0; }
-  nav { display: flex; gap: 4px; flex-wrap: wrap; }
-  nav button { background: none; border: 0; padding: 8px 12px; border-radius: 8px; cursor: pointer; font: inherit; color: var(--suave); }
-  nav button.ativo { background: var(--azul-claro); color: var(--azul); font-weight: 600; }
-  .contador { background: var(--vermelho); color: #fff; border-radius: 10px; padding: 0 7px; font-size: 12px; margin-left: 4px; }
-  #rodape-versao { margin-left: auto; color: var(--suave); font-size: 12px; }
-  main { max-width: 1000px; margin: 0 auto; padding: 16px; }
-  .cartao { background: var(--cartao); border: 1px solid var(--borda); border-radius: 12px; padding: 16px; margin-bottom: 12px; }
+  body { margin: 0; font: 15px/1.5 "Inter", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; background: var(--fundo); color: var(--texto); }
+  a { color: var(--marca-escura); }
+  header { background: var(--topo); padding: 10px 16px; display: flex; gap: 20px; align-items: center; flex-wrap: wrap; position: sticky; top: 0; z-index: 5; box-shadow: 0 2px 8px rgba(0,0,0,.15); }
+  .marca { display: flex; align-items: center; gap: 10px; text-decoration: none; }
+  .marca img { height: 34px; display: block; }
+  .marca span { color: #fff; font-weight: 600; font-size: 14px; letter-spacing: .3px; border-left: 1px solid #3a3e48; padding-left: 10px; }
+  nav { display: flex; gap: 2px; flex-wrap: wrap; }
+  nav button { background: none; border: 0; padding: 8px 12px; border-radius: 8px; cursor: pointer; font: inherit; font-size: 14px; color: var(--topo-texto); }
+  nav button:hover { color: #fff; background: rgba(255,255,255,.06); }
+  nav button.ativo { background: var(--marca); color: #fff; font-weight: 600; }
+  .contador { background: #fff; color: var(--marca-escura); border-radius: 10px; padding: 0 7px; font-size: 12px; margin-left: 4px; font-weight: 700; }
+  nav button:not(.ativo) .contador { background: var(--marca); color: #fff; }
+  #topo-direita { margin-left: auto; display: flex; gap: 12px; align-items: center; color: var(--topo-texto); font-size: 12px; }
+  #topo-direita button { background: none; border: 1px solid #3a3e48; color: var(--topo-texto); border-radius: 6px; padding: 4px 10px; cursor: pointer; font: inherit; }
+  .status-ml { display: inline-flex; align-items: center; gap: 12px; cursor: default; }
+  .ponto { width: 8px; height: 8px; border-radius: 50%; background: #888; display: inline-block; }
+  .ponto.ok { background: #2ecc71; } .ponto.erro { background: #e74c3c; } .ponto.atencao { background: #f1c40f; }
+  main { max-width: 1040px; margin: 0 auto; padding: 20px 16px 48px; }
+  .cartao { background: var(--cartao); border: 1px solid var(--borda); border-radius: 12px; padding: 16px 18px; margin-bottom: 12px; box-shadow: var(--sombra); }
   .explica { color: var(--suave); margin: 0 0 12px; }
   .linha { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
   .entre { justify-content: space-between; }
-  .etiqueta { display: inline-block; padding: 1px 8px; border-radius: 10px; font-size: 12px; background: var(--azul-claro); color: var(--azul); }
+  .etiqueta { display: inline-block; padding: 2px 9px; border-radius: 999px; font-size: 12px; background: var(--azul-claro); color: var(--azul); font-weight: 500; }
   .etiqueta.verde { background: var(--verde-claro); color: var(--verde); }
   .etiqueta.amarela { background: var(--amarelo-claro); color: var(--amarelo); }
   .etiqueta.vermelha { background: var(--vermelho-claro); color: var(--vermelho); }
-  .pergunta { font-size: 16px; font-weight: 600; margin: 6px 0; }
+  .etiqueta.cinza { background: #eef0f3; color: var(--suave); }
+  .pergunta { font-size: 17px; font-weight: 600; margin: 6px 0 8px; }
   .suave { color: var(--suave); font-size: 13px; }
-  textarea, input, select { width: 100%; font: inherit; padding: 8px 10px; border: 1px solid var(--borda); border-radius: 8px; background: #fff; color: var(--texto); }
-  textarea { min-height: 80px; resize: vertical; }
+  textarea, input, select { width: 100%; font: inherit; padding: 9px 11px; border: 1px solid var(--borda); border-radius: 8px; background: #fff; color: var(--texto); }
+  textarea:focus, input:focus, select:focus { outline: 2px solid var(--marca-clara); border-color: var(--marca); }
+  textarea { min-height: 84px; resize: vertical; }
   label { display: block; font-size: 13px; color: var(--suave); margin: 10px 0 4px; }
-  button.acao { font: inherit; padding: 8px 14px; border-radius: 8px; border: 1px solid var(--borda); background: #fff; cursor: pointer; }
-  button.principal { background: var(--azul); border-color: var(--azul); color: #fff; }
-  button.acao:disabled { opacity: .5; cursor: not-allowed; }
-  .vazio { text-align: center; color: var(--suave); padding: 32px 0; }
+  button.acao { font: inherit; font-size: 14px; padding: 8px 14px; border-radius: 8px; border: 1px solid var(--borda); background: #fff; cursor: pointer; color: var(--texto); }
+  button.acao:hover { border-color: #c8ccd3; }
+  button.principal { background: var(--marca); border-color: var(--marca); color: #fff; font-weight: 600; }
+  button.principal:hover { background: var(--marca-escura); border-color: var(--marca-escura); }
+  button.acao:disabled { opacity: .45; cursor: not-allowed; }
+  .vazio { text-align: center; color: var(--suave); padding: 40px 0; }
+  .vazio b { display: block; font-size: 17px; color: var(--texto); margin-bottom: 4px; }
   .grade2 { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
-  @media (max-width: 700px) { .grade2 { grid-template-columns: 1fr; } }
-  .caixa { background: var(--fundo); border-radius: 8px; padding: 10px; white-space: pre-wrap; }
-  .barra { height: 8px; background: var(--azul-claro); border-radius: 4px; overflow: hidden; }
-  .barra > div { height: 100%; background: var(--azul); }
-  .aviso { padding: 10px 12px; border-radius: 8px; margin-bottom: 12px; }
-  .aviso.amarelo { background: var(--amarelo-claro); color: var(--amarelo); }
+  .indicadores { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; margin-bottom: 12px; }
+  .indicador { background: var(--cartao); border: 1px solid var(--borda); border-radius: 12px; padding: 12px 14px; box-shadow: var(--sombra); }
+  .indicador .valor { font-size: 24px; font-weight: 700; line-height: 1.2; }
+  .indicador .rotulo { font-size: 12px; color: var(--suave); text-transform: uppercase; letter-spacing: .4px; }
+  .indicador.destaque .valor { color: var(--marca-escura); }
+  @media (max-width: 760px) { .grade2 { grid-template-columns: 1fr; } .indicadores { grid-template-columns: 1fr 1fr; } #topo-direita { display: none; } }
+  .filtros { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 12px; }
+  .filtros button { font: inherit; font-size: 13px; padding: 4px 12px; border-radius: 999px; border: 1px solid var(--borda); background: #fff; cursor: pointer; color: var(--suave); }
+  .filtros button.ativo { background: var(--texto); border-color: var(--texto); color: #fff; }
+  .card-pergunta { border-left: 4px solid #d0d4da; }
+  .card-pergunta.pronta { border-left-color: var(--verde); }
+  .card-pergunta.ia { border-left-color: var(--azul); }
+  .card-pergunta.humano { border-left-color: #f1c40f; }
+  .contagem { font-size: 12px; color: var(--suave); text-align: right; margin-top: 2px; }
+  .caixa { background: var(--fundo); border-radius: 8px; padding: 10px 12px; white-space: pre-wrap; }
+  .barra { height: 8px; background: var(--marca-clara); border-radius: 4px; overflow: hidden; }
+  .barra > div { height: 100%; background: var(--marca); }
+  .aviso { padding: 10px 14px; border-radius: 10px; margin-bottom: 12px; border: 1px solid transparent; }
+  .aviso.amarelo { background: var(--amarelo-claro); color: var(--amarelo); border-color: #f5e0b0; }
   .aviso.verde { background: var(--verde-claro); color: var(--verde); }
   .aviso.vermelho { background: var(--vermelho-claro); color: var(--vermelho); }
-  code { background: var(--fundo); padding: 1px 5px; border-radius: 4px; word-break: break-all; }
-  details summary { cursor: pointer; color: var(--azul); }
-  #entrar { max-width: 360px; margin: 80px auto; }
-  #toast { position: fixed; bottom: 16px; left: 50%; transform: translateX(-50%); background: #1d2330; color: #fff; padding: 10px 16px; border-radius: 8px; display: none; z-index: 10; max-width: 90vw; }
+  code { background: var(--fundo); padding: 1px 6px; border-radius: 4px; word-break: break-all; font-size: 13px; }
+  details summary { cursor: pointer; }
+  details summary b { color: var(--texto); }
+  h3 { margin: 18px 0 10px; }
+  #entrar { max-width: 380px; margin: 10vh auto; text-align: center; }
+  #entrar .logo-login { background: var(--topo); border-radius: 12px; padding: 18px; margin-bottom: 16px; }
+  #entrar .logo-login img { max-width: 220px; width: 100%; }
+  #toast { position: fixed; bottom: 18px; left: 50%; transform: translateX(-50%); background: var(--topo); color: #fff; padding: 10px 16px; border-radius: 10px; display: none; z-index: 10; max-width: 90vw; box-shadow: 0 8px 24px rgba(0,0,0,.2); }
 </style>
+<link rel="icon" type="image/png" href="/favicon.png">
 </head>
 <body>
 <div id="entrar" class="cartao" style="display:none">
-  <h2 style="margin-top:0">MCS Bot</h2>
+  <div class="logo-login"><img src="/logo.png" alt="MCS Brasil"></div>
+  <h2 style="margin:0 0 4px">Bot de perguntas</h2>
   <p class="explica">Entre com a senha do painel.</p>
   <form onsubmit="entrar(event)">
     <input type="password" id="senha" placeholder="Senha" autofocus>
@@ -65,7 +101,7 @@
 
 <div id="app" style="display:none">
   <header>
-    <h1>MCS Bot · Perguntas</h1>
+    <a class="marca" href="/"><img src="/logo.png" alt="MCS Brasil"><span>Bot de perguntas</span></a>
     <nav>
       <button data-aba="pendentes" class="ativo">Pendentes <span id="n-pendentes"></span></button>
       <button data-aba="frequentes">Perguntas frequentes</button>
@@ -73,7 +109,7 @@
       <button data-aba="comparar">Respondidas</button>
       <button data-aba="conexao">Conexão</button>
     </nav>
-    <span id="rodape-versao"></span>
+    <div id="topo-direita"><span class="status-ml" id="status-ml"></span><span id="rodape-versao"></span><button onclick="sair()">Sair</button></div>
   </header>
   <main id="conteudo"></main>
 </div>
@@ -126,6 +162,35 @@ async function carregarEstado() {
   const n = estado.perguntas.pendente || 0;
   $('#n-pendentes').innerHTML = n ? `<span class="contador">${n}</span>` : '';
   $('#rodape-versao').textContent = `v${estado.versao}`;
+  const ml = estado.mercadoLivre;
+  const iaOk = !estado.ia.falta;
+  const item = (ok, cor, rotulo, dica) => `<span title="${esc(dica)}"><span class="ponto ${ok ? 'ok' : cor}"></span> ${rotulo}</span>`;
+  $('#status-ml').innerHTML =
+    item(ml.conectado, 'erro', 'ML', ml.conectado ? 'Mercado Livre conectado' : 'Mercado Livre desconectado') +
+    item(iaOk, 'atencao', 'IA', iaOk ? 'IA ligada' : 'IA sem chave') +
+    item(ml.envioHabilitado, 'atencao', 'Envio', ml.envioHabilitado ? 'Envio ligado' : 'Envio desligado: só sugere');
+  document.title = n ? `(${n}) MCS Bot · Perguntas` : 'MCS Bot · Perguntas';
+}
+async function sair() {
+  try { await api('/painel/sair', { metodo: 'POST' }); } catch {}
+  $('#senha').value = '';
+  mostrarEntrar();
+}
+function contar(el) {
+  const c = el.parentElement.querySelector(`.contagem[data-para="${el.id}"]`);
+  if (c) c.textContent = `${el.value.length}/2000`;
+}
+async function copiar(id) {
+  const texto = $(`#t-${id}`).value.trim();
+  if (!texto) return toast('Não há resposta para copiar.');
+  try { await navigator.clipboard.writeText(texto); toast('Resposta copiada. Cole no Mercado Livre.'); }
+  catch { $(`#t-${id}`).select(); document.execCommand('copy'); toast('Resposta copiada.'); }
+}
+function duracao(min) {
+  if (min == null) return '–';
+  if (min < 60) return `${Math.round(min)} min`;
+  if (min < 48 * 60) return `${(min / 60).toFixed(1).replace('.', ',')} h`;
+  return `${Math.round(min / 1440)} dias`;
 }
 
 async function iniciar() {
@@ -174,25 +239,56 @@ function linkAnuncio(p) {
 }
 
 // ---------------- Pendentes ----------------
+let filtroAssunto = '';
+function filtrarAssunto(a) { filtroAssunto = a; mostrar('pendentes', true); }
+function classeOrigem(p) {
+  if (p.sugestaoOrigem === 'pronta') return 'pronta';
+  if (p.sugestaoOrigem === 'ia' && p.sugestao) return 'ia';
+  return 'humano';
+}
 async function telaPendentes() {
-  const lista = await api('/api/perguntas?status=pendente&limite=200');
+  const todas = await api('/api/perguntas?status=pendente&limite=200');
   const envio = estado.mercadoLivre.envioHabilitado;
   let h = avisosGerais();
+  const maisAntiga = todas.reduce((m, p) => (!m || p.criadaEm < m ? p.criadaEm : m), null);
+  const t = estado.tempoDeResposta30d || {};
+  const precisam = todas.filter((p) => classeOrigem(p) === 'humano').length;
+  h += `<div class="indicadores">
+    <div class="indicador destaque"><div class="rotulo">Pendentes</div><div class="valor">${todas.length}</div><div class="suave">${precisam} sem sugestão boa</div></div>
+    <div class="indicador"><div class="rotulo">Mais antiga</div><div class="valor">${maisAntiga ? esc(haQuanto(maisAntiga).replace('há ', '')) : '–'}</div><div class="suave">esperando resposta</div></div>
+    <div class="indicador"><div class="rotulo">Tempo de resposta</div><div class="valor">${duracao(t.medianaMin)}</div><div class="suave">mediana, 30 dias (${t.quantidade || 0})</div></div>
+    <div class="indicador"><div class="rotulo">Respostas prontas</div><div class="valor">${estado.respostasProntas}</div><div class="suave">ativas</div></div>
+  </div>`;
+  const porAssunto = {};
+  for (const p of todas) porAssunto[p.assunto] = (porAssunto[p.assunto] || 0) + 1;
+  if (filtroAssunto && !porAssunto[filtroAssunto]) filtroAssunto = '';
+  const lista = filtroAssunto ? todas.filter((p) => p.assunto === filtroAssunto) : todas;
   h += `<div class="cartao"><div class="linha entre"><div>
       <b>${lista.length} pergunta(s) esperando resposta</b>
       <p class="explica" style="margin:4px 0 0">Cada pergunta já vem com uma sugestão: uma resposta pronta, quando alguma casa, ou a IA usando a ficha do anúncio.
       ${envio ? 'Revise e clique em Enviar.' : '<b>O envio está desligado</b> (o Gobots ainda responde): por enquanto o sistema só sugere, para compararmos.'}</p>
     </div><button class="acao" onclick="sincronizar()">Buscar agora</button></div></div>`;
-  if (!lista.length) return h + '<p class="vazio">Nenhuma pergunta pendente.</p>';
+  if (!todas.length) return h + `<div class="vazio"><b>Tudo respondido</b>Nenhuma pergunta esperando. O sistema busca novas a cada poucos minutos.</div>`;
+  const chaves = Object.keys(porAssunto);
+  if (chaves.length > 1) {
+    h += `<div class="filtros"><button class="${filtroAssunto ? '' : 'ativo'}" onclick="filtrarAssunto('')">Todas (${todas.length})</button>`;
+    for (const k of chaves.sort((a, b) => porAssunto[b] - porAssunto[a])) {
+      const nome = todas.find((p) => p.assunto === k)?.assuntoNome || k;
+      h += `<button class="${filtroAssunto === k ? 'ativo' : ''}" onclick="filtrarAssunto(${esc(JSON.stringify(k))})">${esc(nome)} (${porAssunto[k]})</button>`;
+    }
+    h += '</div>';
+  }
   for (const p of lista) {
-    h += `<div class="cartao" id="p-${p.id}">
+    h += `<div class="cartao card-pergunta ${classeOrigem(p)}" id="p-${p.id}">
       <div class="linha entre"><span class="suave">${linkAnuncio(p)}</span><span class="suave">${haQuanto(p.criadaEm)}</span></div>
       <div class="pergunta">${esc(p.texto)}</div>
       <div class="linha"><span class="etiqueta">${esc(p.assuntoNome)}</span>${etiquetaOrigem(p)}<span class="suave">${esc(p.sugestaoMotivo || '')}</span></div>
       <label>Resposta</label>
-      <textarea id="t-${p.id}" maxlength="2000">${esc(p.sugestao || '')}</textarea>
-      <div class="linha" style="margin-top:8px">
+      <textarea id="t-${p.id}" maxlength="2000" oninput="contar(this)">${esc(p.sugestao || '')}</textarea>
+      <div class="contagem" data-para="t-${p.id}">${(p.sugestao || '').length}/2000</div>
+      <div class="linha" style="margin-top:6px">
         <button class="acao principal" onclick="enviar(${p.id})" ${envio ? '' : 'disabled title="Envio desligado (ML_ENVIO_HABILITADO)"'}>Enviar ao Mercado Livre</button>
+        ${envio ? '' : `<button class="acao" onclick="copiar(${p.id})">Copiar resposta</button>`}
         <button class="acao" onclick="refazer(${p.id})">Refazer sugestão</button>
         <button class="acao" onclick="novaProntaDe(${esc(JSON.stringify({ texto: p.texto, resposta: p.sugestao || "", assunto: p.assunto, itemId: p.itemId }))})">Virar resposta pronta</button>
       </div></div>`;
@@ -233,7 +329,7 @@ async function telaFrequentes() {
         'O histórico ainda não foi importado.'}</p>
     </div><button class="acao principal" onclick="importar()" ${hist.rodando || !estado.mercadoLivre.conectado ? 'disabled' : ''}>${hist.fim ? 'Importar de novo' : 'Importar histórico'}</button></div></div>`;
   if (hist.rodando) setTimeout(() => aba === 'frequentes' && mostrar('frequentes', true), 5000);
-  if (!f.total) return h + '<p class="vazio">Sem perguntas respondidas no banco ainda.</p>';
+  if (!f.total) return h + '<div class="vazio"><b>Ainda sem histórico</b>Clique em Importar histórico acima para trazer as perguntas já respondidas no Mercado Livre.</div>';
   h += `<p class="suave">${f.total} perguntas respondidas analisadas.</p>`;
   for (const a of f.assuntos) {
     h += `<div class="cartao"><div class="linha entre"><b>${esc(a.nome)}</b><span class="suave">${a.quantidade} perguntas · ${a.percentual}%</span></div>
@@ -364,7 +460,7 @@ async function telaComparar() {
   const lista = await api('/api/perguntas?status=respondida&comSugestao=1&limite=100');
   let h = `<div class="cartao"><b>O que foi respondido × o que o sistema sugeriu</b>
     <p class="explica" style="margin:4px 0 0">Enquanto o Gobots continua ligado, cada pergunta que ele (ou alguém) responde aparece aqui ao lado da nossa sugestão. É assim que decidimos quando dá para desligar o Gobots e ligar o envio.</p></div>`;
-  if (!lista.length) return h + '<p class="vazio">Ainda não há perguntas respondidas que tenham sugestão nossa. Elas aparecem conforme novas perguntas chegam.</p>';
+  if (!lista.length) return h + '<div class="vazio"><b>Nada para comparar ainda</b>Aqui aparecem as perguntas que o Gobots (ou alguém) respondeu e para as quais o bot também deu sugestão.</div>';
   for (const p of lista) {
     const quem = { externo: 'Gobots / fora do sistema', painel: 'pelo painel', 'mcs-bot': 'automático' }[p.respondidaPor] || p.respondidaPor;
     h += `<div class="cartao"><div class="linha entre"><span class="suave">${linkAnuncio(p)}</span><span class="suave">${dataBr(p.criadaEm)}</span></div>
