@@ -157,7 +157,7 @@ function avisosGerais() {
   const ml = estado.mercadoLivre;
   let h = '';
   if (!ml.conectado) h += `<div class="aviso amarelo">O Mercado Livre ainda não está conectado. Vá em <b>Conexão</b> para entrar.</div>`;
-  if (!estado.ia.configurada) h += `<div class="aviso amarelo">A IA não está configurada (falta ANTHROPIC_API_KEY). Por enquanto só as respostas prontas geram sugestão.</div>`;
+  if (estado.ia.falta) h += `<div class="aviso amarelo">IA: ${esc(estado.ia.falta)} Enquanto isso, só as respostas prontas geram sugestão.</div>`;
   return h;
 }
 
@@ -376,7 +376,8 @@ async function telaConexao() {
     <p class="suave">Última busca de pendentes: ${s ? `${dataBr(s.em)} — ${s.pendentes} pendente(s)${s.erro ? `, erro: ${esc(s.erro)}` : ''}` : 'ainda não rodou'}</p>
   </div>
   <div class="cartao"><b>IA</b>
-    <p>${estado.ia.configurada ? `<span class="etiqueta verde">configurada</span> modelo: ${esc(estado.ia.modelo)}` : '<span class="etiqueta amarela">sem ANTHROPIC_API_KEY</span>'}</p>
+    <p>${estado.ia.configurada ? `<span class="etiqueta verde">configurada</span> ${esc(estado.ia.provedor)} · modelo: ${esc(estado.ia.modelo)}` : '<span class="etiqueta amarela">não configurada</span>'}</p>
+    ${estado.ia.falta ? `<p class="suave">${esc(estado.ia.falta)}</p>` : ''}
   </div>
   <div class="cartao"><b>Últimos 30 dias</b>
     <p>${t.quantidade} perguntas respondidas · tempo mediano até a resposta: ${t.medianaMin != null ? `${t.medianaMin} min` : '—'}</p>
