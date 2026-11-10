@@ -1,0 +1,391 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>MCS Bot · Perguntas</title>
+<style>
+  :root {
+    --fundo: #f5f6f8; --cartao: #fff; --texto: #1d2330; --suave: #5d6678; --borda: #e2e5ea;
+    --azul: #2357d9; --azul-claro: #e8eefc; --verde: #1d8a4e; --verde-claro: #e5f5ec;
+    --amarelo: #a86b00; --amarelo-claro: #fff4dc; --vermelho: #c0392b; --vermelho-claro: #fdecea;
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; font: 15px/1.45 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; background: var(--fundo); color: var(--texto); }
+  header { background: var(--cartao); border-bottom: 1px solid var(--borda); padding: 12px 16px; display: flex; gap: 16px; align-items: center; flex-wrap: wrap; position: sticky; top: 0; z-index: 5; }
+  header h1 { font-size: 17px; margin: 0; }
+  nav { display: flex; gap: 4px; flex-wrap: wrap; }
+  nav button { background: none; border: 0; padding: 8px 12px; border-radius: 8px; cursor: pointer; font: inherit; color: var(--suave); }
+  nav button.ativo { background: var(--azul-claro); color: var(--azul); font-weight: 600; }
+  .contador { background: var(--vermelho); color: #fff; border-radius: 10px; padding: 0 7px; font-size: 12px; margin-left: 4px; }
+  #rodape-versao { margin-left: auto; color: var(--suave); font-size: 12px; }
+  main { max-width: 1000px; margin: 0 auto; padding: 16px; }
+  .cartao { background: var(--cartao); border: 1px solid var(--borda); border-radius: 12px; padding: 16px; margin-bottom: 12px; }
+  .explica { color: var(--suave); margin: 0 0 12px; }
+  .linha { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+  .entre { justify-content: space-between; }
+  .etiqueta { display: inline-block; padding: 1px 8px; border-radius: 10px; font-size: 12px; background: var(--azul-claro); color: var(--azul); }
+  .etiqueta.verde { background: var(--verde-claro); color: var(--verde); }
+  .etiqueta.amarela { background: var(--amarelo-claro); color: var(--amarelo); }
+  .etiqueta.vermelha { background: var(--vermelho-claro); color: var(--vermelho); }
+  .pergunta { font-size: 16px; font-weight: 600; margin: 6px 0; }
+  .suave { color: var(--suave); font-size: 13px; }
+  textarea, input, select { width: 100%; font: inherit; padding: 8px 10px; border: 1px solid var(--borda); border-radius: 8px; background: #fff; color: var(--texto); }
+  textarea { min-height: 80px; resize: vertical; }
+  label { display: block; font-size: 13px; color: var(--suave); margin: 10px 0 4px; }
+  button.acao { font: inherit; padding: 8px 14px; border-radius: 8px; border: 1px solid var(--borda); background: #fff; cursor: pointer; }
+  button.principal { background: var(--azul); border-color: var(--azul); color: #fff; }
+  button.acao:disabled { opacity: .5; cursor: not-allowed; }
+  .vazio { text-align: center; color: var(--suave); padding: 32px 0; }
+  .grade2 { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+  @media (max-width: 700px) { .grade2 { grid-template-columns: 1fr; } }
+  .caixa { background: var(--fundo); border-radius: 8px; padding: 10px; white-space: pre-wrap; }
+  .barra { height: 8px; background: var(--azul-claro); border-radius: 4px; overflow: hidden; }
+  .barra > div { height: 100%; background: var(--azul); }
+  .aviso { padding: 10px 12px; border-radius: 8px; margin-bottom: 12px; }
+  .aviso.amarelo { background: var(--amarelo-claro); color: var(--amarelo); }
+  .aviso.verde { background: var(--verde-claro); color: var(--verde); }
+  .aviso.vermelho { background: var(--vermelho-claro); color: var(--vermelho); }
+  code { background: var(--fundo); padding: 1px 5px; border-radius: 4px; word-break: break-all; }
+  details summary { cursor: pointer; color: var(--azul); }
+  #entrar { max-width: 360px; margin: 80px auto; }
+  #toast { position: fixed; bottom: 16px; left: 50%; transform: translateX(-50%); background: #1d2330; color: #fff; padding: 10px 16px; border-radius: 8px; display: none; z-index: 10; max-width: 90vw; }
+</style>
+</head>
+<body>
+<div id="entrar" class="cartao" style="display:none">
+  <h2 style="margin-top:0">MCS Bot</h2>
+  <p class="explica">Entre com a senha do painel.</p>
+  <form onsubmit="entrar(event)">
+    <input type="password" id="senha" placeholder="Senha" autofocus>
+    <div style="margin-top:12px"><button class="acao principal" type="submit">Entrar</button></div>
+    <p id="erro-entrar" class="suave" style="color:var(--vermelho)"></p>
+  </form>
+</div>
+
+<div id="app" style="display:none">
+  <header>
+    <h1>MCS Bot · Perguntas</h1>
+    <nav>
+      <button data-aba="pendentes" class="ativo">Pendentes <span id="n-pendentes"></span></button>
+      <button data-aba="frequentes">Perguntas frequentes</button>
+      <button data-aba="prontas">Respostas prontas</button>
+      <button data-aba="comparar">Respondidas</button>
+      <button data-aba="conexao">Conexão</button>
+    </nav>
+    <span id="rodape-versao"></span>
+  </header>
+  <main id="conteudo"></main>
+</div>
+<div id="toast"></div>
+
+<script>
+const $ = (s) => document.querySelector(s);
+let estado = null;
+let assuntos = [];
+let aba = 'pendentes';
+
+function esc(s) { return String(s ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]); }
+function toast(msg) { const t = $('#toast'); t.textContent = msg; t.style.display = 'block'; clearTimeout(t._h); t._h = setTimeout(() => t.style.display = 'none', 4000); }
+function haQuanto(iso) {
+  if (!iso) return '';
+  const min = Math.round((Date.now() - Date.parse(iso)) / 60000);
+  if (min < 1) return 'agora';
+  if (min < 60) return `há ${min} min`;
+  const h = Math.round(min / 60);
+  if (h < 48) return `há ${h} h`;
+  return `há ${Math.round(h / 24)} dias`;
+}
+function dataBr(iso) { return iso ? new Date(iso).toLocaleString('pt-BR', { dateStyle: 'short', timeStyle: 'short' }) : ''; }
+
+async function api(url, opcoes = {}) {
+  const r = await fetch(url, {
+    method: opcoes.metodo || 'GET',
+    headers: opcoes.corpo !== undefined ? { 'Content-Type': 'application/json' } : {},
+    body: opcoes.corpo !== undefined ? JSON.stringify(opcoes.corpo) : undefined,
+    credentials: 'same-origin',
+  });
+  const j = await r.json().catch(() => ({}));
+  if (r.status === 401 && !url.startsWith('/painel/login')) { mostrarEntrar(); throw new Error(j.mensagem || 'Entre no painel.'); }
+  if (!r.ok) throw new Error(j.mensagem || `Erro ${r.status}`);
+  return j;
+}
+
+function mostrarEntrar() { $('#app').style.display = 'none'; $('#entrar').style.display = 'block'; }
+async function entrar(ev) {
+  ev.preventDefault();
+  try {
+    await api('/painel/login', { metodo: 'POST', corpo: { senha: $('#senha').value } });
+    $('#entrar').style.display = 'none';
+    iniciar();
+  } catch (e) { $('#erro-entrar').textContent = e.message; }
+}
+
+async function carregarEstado() {
+  estado = await api('/api/painel/estado');
+  const n = estado.perguntas.pendente || 0;
+  $('#n-pendentes').innerHTML = n ? `<span class="contador">${n}</span>` : '';
+  $('#rodape-versao').textContent = `v${estado.versao}`;
+}
+
+async function iniciar() {
+  const s = await fetch('/painel/sessao').then((r) => r.json());
+  if (!s.logado) return mostrarEntrar();
+  $('#app').style.display = 'block';
+  assuntos = await api('/api/assuntos');
+  await carregarEstado();
+  const p = new URLSearchParams(location.search);
+  if (p.get('conectado')) { toast('Mercado Livre conectado.'); history.replaceState(null, '', '/'); }
+  mostrar(aba);
+  setInterval(() => { if (aba === 'pendentes' && !document.querySelector('textarea:focus')) mostrar('pendentes', true); else carregarEstado(); }, 60_000);
+}
+
+document.querySelectorAll('nav button').forEach((b) => b.onclick = () => mostrar(b.dataset.aba));
+
+async function mostrar(nome, silencioso) {
+  aba = nome;
+  document.querySelectorAll('nav button').forEach((b) => b.classList.toggle('ativo', b.dataset.aba === nome));
+  if (!silencioso) $('#conteudo').innerHTML = '<p class="vazio">Carregando…</p>';
+  try {
+    await carregarEstado();
+    const telas = { pendentes: telaPendentes, frequentes: telaFrequentes, prontas: telaProntas, comparar: telaComparar, conexao: telaConexao };
+    $('#conteudo').innerHTML = await telas[nome]();
+  } catch (e) { $('#conteudo').innerHTML = `<div class="aviso vermelho">${esc(e.message)}</div>`; }
+}
+
+function avisosGerais() {
+  const ml = estado.mercadoLivre;
+  let h = '';
+  if (!ml.conectado) h += `<div class="aviso amarelo">O Mercado Livre ainda não está conectado. Vá em <b>Conexão</b> para entrar.</div>`;
+  if (!estado.ia.configurada) h += `<div class="aviso amarelo">A IA não está configurada (falta ANTHROPIC_API_KEY). Por enquanto só as respostas prontas geram sugestão.</div>`;
+  return h;
+}
+
+function etiquetaOrigem(p) {
+  if (p.sugestaoOrigem === 'pronta') return '<span class="etiqueta verde">resposta pronta</span>';
+  if (p.sugestaoOrigem === 'ia' && p.sugestao) return `<span class="etiqueta">IA · confiança ${Math.round((p.sugestaoConfianca || 0) * 100)}%</span>`;
+  if (p.sugestaoOrigem === 'ia') return '<span class="etiqueta amarela">IA pediu uma pessoa</span>';
+  return '<span class="etiqueta amarela">sem sugestão</span>';
+}
+
+function linkAnuncio(p) {
+  const nome = esc(p.itemTitulo || p.itemId || 'anúncio');
+  return p.permalink ? `<a href="${esc(p.permalink)}" target="_blank" rel="noopener">${nome}</a>` : nome;
+}
+
+// ---------------- Pendentes ----------------
+async function telaPendentes() {
+  const lista = await api('/api/perguntas?status=pendente&limite=200');
+  const envio = estado.mercadoLivre.envioHabilitado;
+  let h = avisosGerais();
+  h += `<div class="cartao"><div class="linha entre"><div>
+      <b>${lista.length} pergunta(s) esperando resposta</b>
+      <p class="explica" style="margin:4px 0 0">Cada pergunta já vem com uma sugestão: uma resposta pronta, quando alguma casa, ou a IA usando a ficha do anúncio.
+      ${envio ? 'Revise e clique em Enviar.' : '<b>O envio está desligado</b> (o Gobots ainda responde): por enquanto o sistema só sugere, para compararmos.'}</p>
+    </div><button class="acao" onclick="sincronizar()">Buscar agora</button></div></div>`;
+  if (!lista.length) return h + '<p class="vazio">Nenhuma pergunta pendente.</p>';
+  for (const p of lista) {
+    h += `<div class="cartao" id="p-${p.id}">
+      <div class="linha entre"><span class="suave">${linkAnuncio(p)}</span><span class="suave">${haQuanto(p.criadaEm)}</span></div>
+      <div class="pergunta">${esc(p.texto)}</div>
+      <div class="linha"><span class="etiqueta">${esc(p.assuntoNome)}</span>${etiquetaOrigem(p)}<span class="suave">${esc(p.sugestaoMotivo || '')}</span></div>
+      <label>Resposta</label>
+      <textarea id="t-${p.id}" maxlength="2000">${esc(p.sugestao || '')}</textarea>
+      <div class="linha" style="margin-top:8px">
+        <button class="acao principal" onclick="enviar(${p.id})" ${envio ? '' : 'disabled title="Envio desligado (ML_ENVIO_HABILITADO)"'}>Enviar ao Mercado Livre</button>
+        <button class="acao" onclick="refazer(${p.id})">Refazer sugestão</button>
+        <button class="acao" onclick="novaProntaDe(${esc(JSON.stringify({ texto: p.texto, resposta: p.sugestao || "", assunto: p.assunto, itemId: p.itemId }))})">Virar resposta pronta</button>
+      </div></div>`;
+  }
+  return h;
+}
+
+async function sincronizar() {
+  toast('Buscando perguntas no Mercado Livre…');
+  try {
+    const r = await api('/api/sincronizar', { metodo: 'POST' });
+    toast(r.erro ? `Falhou: ${r.erro}` : `${r.pendentes} pendente(s), ${r.novas} nova(s), ${r.resolvidasFora} respondida(s) por fora.`);
+    mostrar('pendentes', true);
+  } catch (e) { toast(e.message); }
+}
+async function refazer(id) {
+  toast('Montando nova sugestão…');
+  try { await api(`/api/perguntas/${id}/sugestao`, { metodo: 'POST' }); mostrar('pendentes', true); } catch (e) { toast(e.message); }
+}
+async function enviar(id) {
+  const texto = $(`#t-${id}`).value.trim();
+  if (!texto) return toast('Escreva a resposta antes de enviar.');
+  if (!confirm('Enviar esta resposta ao Mercado Livre? Ela fica pública no anúncio.')) return;
+  try { await api(`/api/perguntas/${id}/responder`, { metodo: 'POST', corpo: { texto } }); toast('Resposta enviada.'); mostrar('pendentes', true); }
+  catch (e) { toast(e.message); }
+}
+
+// ---------------- Frequentes ----------------
+async function telaFrequentes() {
+  const hist = estado.historico;
+  const f = await api('/api/frequentes');
+  let h = avisosGerais();
+  h += `<div class="cartao"><div class="linha entre"><div>
+      <b>De onde vem esta lista</b>
+      <p class="explica" style="margin:4px 0 0">Do histórico de perguntas já respondidas no Mercado Livre (inclui o que o Gobots respondeu). O sistema agrupa por assunto e junta perguntas parecidas. Em cada grupo aparece a resposta mais usada, que você pode transformar em resposta pronta com um clique.</p>
+      <p class="suave" style="margin:6px 0 0">${hist.rodando ? `Importando… ${hist.lidas} perguntas lidas até agora.` :
+        hist.fim ? `Última importação: ${dataBr(hist.fim)}, ${hist.lidas} perguntas${hist.parouPor ? ` (${esc(hist.parouPor)})` : ''}.${hist.erro ? ` <span style="color:var(--vermelho)">Erro: ${esc(hist.erro)}</span>` : ''}` :
+        'O histórico ainda não foi importado.'}</p>
+    </div><button class="acao principal" onclick="importar()" ${hist.rodando || !estado.mercadoLivre.conectado ? 'disabled' : ''}>${hist.fim ? 'Importar de novo' : 'Importar histórico'}</button></div></div>`;
+  if (hist.rodando) setTimeout(() => aba === 'frequentes' && mostrar('frequentes', true), 5000);
+  if (!f.total) return h + '<p class="vazio">Sem perguntas respondidas no banco ainda.</p>';
+  h += `<p class="suave">${f.total} perguntas respondidas analisadas.</p>`;
+  for (const a of f.assuntos) {
+    h += `<div class="cartao"><div class="linha entre"><b>${esc(a.nome)}</b><span class="suave">${a.quantidade} perguntas · ${a.percentual}%</span></div>
+      <div class="barra" style="margin:8px 0 4px"><div style="width:${Math.min(100, a.percentual)}%"></div></div>
+      <details ${f.assuntos.indexOf(a) < 2 ? 'open' : ''}><summary>Ver os ${a.grupos.length} grupos mais comuns</summary>`;
+    for (const g of a.grupos) {
+      h += `<div style="border-top:1px solid var(--borda);padding-top:10px;margin-top:10px">
+        <div class="linha entre"><b>${g.quantidade}× parecidas</b><span class="suave">gatilho sugerido: <code>${esc(g.gatilhoSugerido)}</code></span></div>
+        <ul style="margin:6px 0">${g.exemplos.map((e) => `<li>${esc(e)}</li>`).join('')}</ul>
+        ${g.respostaMaisUsada ? `<div class="suave">Resposta mais usada (${g.vezesDaResposta}×):</div><div class="caixa">${esc(g.respostaMaisUsada)}</div>` : ''}
+        <div style="margin-top:8px"><button class="acao" onclick="novaProntaDe(${esc(JSON.stringify({ texto: g.exemplos[0], resposta: g.respostaMaisUsada || "", assunto: a.assunto, gatilho: g.gatilhoSugerido }))})">Virar resposta pronta</button></div>
+      </div>`;
+    }
+    h += '</details></div>';
+  }
+  return h;
+}
+
+async function importar() {
+  try { await api('/api/historico/importar', { metodo: 'POST' }); toast('Importação começou. Pode levar alguns minutos.'); mostrar('frequentes', true); }
+  catch (e) { toast(e.message); }
+}
+
+// ---------------- Respostas prontas ----------------
+let rascunho = null;
+
+function novaProntaDe(d) {
+  rascunho = {
+    titulo: (d.texto || '').slice(0, 60),
+    assunto: d.assunto || '',
+    gatilhos: d.gatilho ? [d.gatilho] : [],
+    texto: (d.resposta || '').replace(/^(ol[aá]!?\s*)/i, ''),
+    escopo: 'geral',
+  };
+  mostrar('prontas');
+}
+
+function opcoesAssunto(sel) {
+  return '<option value="">(sem assunto)</option>' + assuntos.map((a) => `<option value="${a.id}" ${a.id === sel ? 'selected' : ''}>${esc(a.nome)}</option>`).join('');
+}
+
+function formPronta(r) {
+  r = r || { titulo: '', assunto: '', gatilhos: [], texto: '', escopo: 'geral', ativa: true };
+  return `<form onsubmit="salvarPronta(event, ${r.id || 'null'})">
+    <label>Nome (só para você achar depois)</label><input name="titulo" value="${esc(r.titulo)}" required>
+    <div class="grade2">
+      <div><label>Assunto</label><select name="assunto">${opcoesAssunto(r.assunto)}</select></div>
+      <div><label>Vale para</label><input name="escopo" value="${esc(r.escopo === 'geral' ? 'geral' : r.escopo)}" placeholder="geral, ou o código do anúncio (MLB...)"></div>
+    </div>
+    <label>Gatilhos: um por linha. A resposta é usada quando a pergunta tem TODAS as palavras de um gatilho, em qualquer ordem.</label>
+    <textarea name="gatilhos" style="min-height:70px" placeholder="nota fiscal&#10;emite nf">${esc((r.gatilhos || []).join('\n'))}</textarea>
+    <label>Texto da resposta. Pode usar {titulo}, {preco}, {estoque}, {garantia}. A saudação e a assinatura entram sozinhas.</label>
+    <textarea name="texto" maxlength="2000" required>${esc(r.texto)}</textarea>
+    <label class="linha" style="color:var(--texto)"><input type="checkbox" name="ativa" style="width:auto" ${r.ativa !== false ? 'checked' : ''}> Ativa</label>
+    <div class="linha" style="margin-top:8px"><button class="acao principal" type="submit">Salvar</button>
+      ${r.id ? `<button class="acao" type="button" onclick="apagarPronta(${r.id})">Apagar</button>` : ''}</div>
+  </form>`;
+}
+
+async function telaProntas() {
+  const lista = await api('/api/respostas-prontas');
+  let h = `<div class="cartao"><b>${rascunho ? 'Nova resposta pronta (a partir de uma pergunta)' : 'Nova resposta pronta'}</b>
+    <p class="explica">Respostas prontas vencem a IA: se uma casa com a pergunta, é ela que vira a sugestão. A do anúncio específico vence a geral.</p>
+    ${formPronta(rascunho)}</div>`;
+  rascunho = null;
+  h += `<div class="cartao"><b>Testar</b><p class="explica">Escreva uma pergunta para ver qual resposta pronta seria usada.</p>
+    <div class="grade2"><input id="teste-texto" placeholder="Ex.: vocês emitem nota fiscal?"><input id="teste-item" placeholder="Anúncio (opcional, MLB...)"></div>
+    <div class="linha" style="margin-top:8px"><button class="acao" onclick="testar()">Testar</button><span id="teste-resultado" class="suave"></span></div></div>`;
+  h += `<h3>${lista.length} resposta(s) pronta(s)</h3>`;
+  for (const r of lista) {
+    h += `<div class="cartao"><details><summary><b>${esc(r.titulo)}</b>
+      ${r.ativa ? '' : '<span class="etiqueta vermelha">desativada</span>'}
+      <span class="etiqueta">${esc(r.escopo === 'geral' ? 'geral' : r.escopo)}</span>
+      <span class="suave">usada ${r.usos}× · gatilhos: ${r.gatilhos.map(esc).join(' | ')}</span></summary>
+      ${formPronta(r)}</details></div>`;
+  }
+  return h;
+}
+
+async function salvarPronta(ev, id) {
+  ev.preventDefault();
+  const f = ev.target;
+  const corpo = {
+    titulo: f.titulo.value, assunto: f.assunto.value || null, escopo: f.escopo.value || 'geral',
+    gatilhos: f.gatilhos.value.split('\n').map((s) => s.trim()).filter(Boolean), texto: f.texto.value, ativa: f.ativa.checked,
+  };
+  try {
+    const r = await api(id ? `/api/respostas-prontas/${id}` : '/api/respostas-prontas', { metodo: id ? 'PUT' : 'POST', corpo });
+    toast(r.pendentesAtualizadas ? `Resposta pronta salva e usada em ${r.pendentesAtualizadas} pergunta(s) pendente(s).` : 'Resposta pronta salva.');
+    mostrar('prontas', true);
+  } catch (e) { toast(e.message); }
+}
+async function apagarPronta(id) {
+  if (!confirm('Apagar esta resposta pronta?')) return;
+  await api(`/api/respostas-prontas/${id}`, { metodo: 'DELETE' }); mostrar('prontas', true);
+}
+async function testar() {
+  const r = await api('/api/respostas-prontas/testar', { metodo: 'POST', corpo: { texto: $('#teste-texto').value, itemId: $('#teste-item').value } });
+  $('#teste-resultado').textContent = `Assunto: ${r.assuntoNome}. ` + (r.casou ? `Usaria "${r.casou.titulo}" (gatilho: ${r.casou.gatilho}).` : 'Nenhuma resposta pronta casa: iria para a IA.');
+}
+
+// ---------------- Respondidas / comparação ----------------
+async function telaComparar() {
+  const lista = await api('/api/perguntas?status=respondida&comSugestao=1&limite=100');
+  let h = `<div class="cartao"><b>O que foi respondido × o que o sistema sugeriu</b>
+    <p class="explica" style="margin:4px 0 0">Enquanto o Gobots continua ligado, cada pergunta que ele (ou alguém) responde aparece aqui ao lado da nossa sugestão. É assim que decidimos quando dá para desligar o Gobots e ligar o envio.</p></div>`;
+  if (!lista.length) return h + '<p class="vazio">Ainda não há perguntas respondidas que tenham sugestão nossa. Elas aparecem conforme novas perguntas chegam.</p>';
+  for (const p of lista) {
+    const quem = { externo: 'Gobots / fora do sistema', painel: 'pelo painel', 'mcs-bot': 'automático' }[p.respondidaPor] || p.respondidaPor;
+    h += `<div class="cartao"><div class="linha entre"><span class="suave">${linkAnuncio(p)}</span><span class="suave">${dataBr(p.criadaEm)}</span></div>
+      <div class="pergunta">${esc(p.texto)}</div>
+      <div class="grade2">
+        <div><div class="suave">Respondido ${esc(quem)} ${p.respondidaEm ? `(${tempoEntre(p.criadaEm, p.respondidaEm)})` : ''}</div><div class="caixa">${esc(p.resposta || '')}</div></div>
+        <div><div class="suave">Nossa sugestão ${etiquetaOrigem(p)}</div><div class="caixa">${esc(p.sugestao || p.sugestaoMotivo || '')}</div></div>
+      </div></div>`;
+  }
+  return h;
+}
+function tempoEntre(a, b) {
+  const min = Math.round((Date.parse(b) - Date.parse(a)) / 60000);
+  return min < 60 ? `em ${min} min` : `em ${Math.round(min / 60)} h`;
+}
+
+// ---------------- Conexão ----------------
+async function telaConexao() {
+  const ml = estado.mercadoLivre;
+  const t = estado.tempoDeResposta30d;
+  const s = estado.ultimaSincronizacao;
+  return `<div class="cartao"><b>Mercado Livre</b>
+    <p>${ml.conectado ? `<span class="etiqueta verde">conectado</span> conta ${esc(ml.userId)}` : '<span class="etiqueta vermelha">não conectado</span>'}
+       ${ml.appConfigurado ? '' : ' <span class="etiqueta vermelha">faltam ML_CLIENT_ID e ML_CLIENT_SECRET</span>'}</p>
+    <p><a class="acao principal" style="text-decoration:none;display:inline-block;padding:8px 14px;border-radius:8px;background:var(--azul);color:#fff" href="/oauth/ml/login">${ml.conectado ? 'Conectar de novo' : 'Conectar ao Mercado Livre'}</a></p>
+    <p class="explica">No app do Mercado Livre (developers.mercadolivre.com.br) configure:</p>
+    <ul>
+      <li>URI de redirect: <code>${esc(ml.enderecoDeRetorno)}</code></li>
+      <li>URL de retorno de notificações: <code>${esc(ml.enderecoDeAvisos)}</code></li>
+      <li>Tópicos: <b>Questions</b> (perguntas). Permissões: perguntas e anúncios.</li>
+    </ul>
+    <p>Envio de respostas: ${ml.envioHabilitado ? '<span class="etiqueta verde">ligado</span>' : '<span class="etiqueta amarela">desligado</span> (ML_ENVIO_HABILITADO=false: só sugere)'}</p>
+    <p class="suave">Última busca de pendentes: ${s ? `${dataBr(s.em)} — ${s.pendentes} pendente(s)${s.erro ? `, erro: ${esc(s.erro)}` : ''}` : 'ainda não rodou'}</p>
+  </div>
+  <div class="cartao"><b>IA</b>
+    <p>${estado.ia.configurada ? `<span class="etiqueta verde">configurada</span> modelo: ${esc(estado.ia.modelo)}` : '<span class="etiqueta amarela">sem ANTHROPIC_API_KEY</span>'}</p>
+  </div>
+  <div class="cartao"><b>Últimos 30 dias</b>
+    <p>${t.quantidade} perguntas respondidas · tempo mediano até a resposta: ${t.medianaMin != null ? `${t.medianaMin} min` : '—'}</p>
+    <p class="suave">Quem respondeu: ${Object.entries(t.porQuem).map(([k, v]) => `${esc({ externo: 'Gobots/fora', painel: 'painel', 'mcs-bot': 'automático' }[k] || k)}: ${v}`).join(' · ') || '—'}</p>
+    <p class="suave">No banco: ${estado.perguntas.pendente} pendentes, ${estado.perguntas.respondida} respondidas, ${estado.perguntas.fechada} fechadas · ${estado.respostasProntas} respostas prontas ativas.</p>
+  </div>`;
+}
+
+iniciar().catch((e) => toast(e.message));
+</script>
+</body>
+</html>

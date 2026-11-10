@@ -1,0 +1,65 @@
+import 'dotenv/config';
+import path from 'node:path';
+
+function semBarraFinal(s: string): string {
+  return s.replace(/\/+$/, '');
+}
+
+function numero(valor: string | undefined, padrao: number): number {
+  const n = Number(valor);
+  return Number.isFinite(n) && n > 0 ? n : padrao;
+}
+
+function ligado(valor: string | undefined, padrao = false): boolean {
+  if (valor === undefined || valor === '') return padrao;
+  return ['1', 'true', 'sim', 'yes', 'on'].includes(valor.trim().toLowerCase());
+}
+
+const baseUrl = semBarraFinal(process.env.BASE_URL || 'http://localhost:3020');
+
+export const config = {
+  port: numero(process.env.PORT, 3020),
+  baseUrl,
+  dataDir: process.env.DATA_DIR || path.resolve(process.cwd(), 'data'),
+
+  /** Senha do painel. Sem ela o painel não abre (não existe painel sem senha). */
+  painelSenha: process.env.PAINEL_SENHA || '',
+  /** Segredo que assina o cookie do painel. Se faltar, deriva da senha. */
+  painelSegredo: process.env.PAINEL_SEGREDO || '',
+  /** Chave para outros sistemas (Gerente IA) lerem o estado: cabeçalho x-api-key. */
+  apiKey: process.env.BOT_API_KEY || '',
+
+  // ---------- Mercado Livre ----------
+  mlClientId: process.env.ML_CLIENT_ID || '',
+  mlClientSecret: process.env.ML_CLIENT_SECRET || '',
+  mlRedirectUri: process.env.ML_REDIRECT_URI || `${baseUrl}/oauth/ml/callback`,
+  mlAuthUrl: process.env.ML_AUTH_URL || 'https://auth.mercadolivre.com.br/authorization',
+  mlTokenUrl: process.env.ML_TOKEN_URL || 'https://api.mercadolibre.com/oauth/token',
+  mlApiBaseUrl: semBarraFinal(process.env.ML_API_BASE_URL || 'https://api.mercadolibre.com'),
+  /**
+   * TRAVA DE ENVIO. Enquanto false, o sistema só sugere: nenhuma resposta sai para o ML.
+   * Começa desligada porque o Gobots ainda responde em paralelo.
+   */
+  mlEnvioHabilitado: ligado(process.env.ML_ENVIO_HABILITADO, false),
+
+  /** De quantos em quantos minutos confere as perguntas pendentes (rede de segurança do webhook). */
+  sincronizarMinutos: numero(process.env.SINCRONIZAR_MINUTOS, 5),
+  /** Teto de perguntas respondidas importadas do histórico. */
+  historicoMax: numero(process.env.HISTORICO_MAX, 5000),
+
+  // ---------- Texto das respostas ----------
+  saudacao: process.env.RESPOSTA_SAUDACAO ?? 'Olá!',
+  assinatura: process.env.RESPOSTA_ASSINATURA ?? 'Agradecemos o contato. Equipe MCS.',
+
+  // ---------- IA ----------
+  anthropicApiKey: process.env.ANTHROPIC_API_KEY || '',
+  anthropicBaseUrl: semBarraFinal(process.env.ANTHROPIC_BASE_URL || 'https://api.anthropic.com'),
+  anthropicVersion: process.env.ANTHROPIC_VERSION || '2023-06-01',
+  /** Vazio = pergunta à API quais modelos a chave tem e escolhe um Sonnet. */
+  iaModelo: process.env.IA_MODELO || process.env.ANTHROPIC_MODEL || '',
+  iaMaxTokens: numero(process.env.IA_MAX_TOKENS, 800),
+};
+
+export function mlConfigurado(): boolean {
+  return Boolean(config.mlClientId && config.mlClientSecret);
+}
