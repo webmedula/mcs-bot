@@ -6,14 +6,18 @@
 <title>MCS Bot · Perguntas</title>
 <style>
   :root {
-    --marca: #ff5400; --marca-escura: #d94700; --marca-clara: #fff1e8;
+    --marca: #ff5400; --marca-escura: #c74100; --marca-hover: #a83600; --marca-clara: #fff1e8; --anel: #ff7a33;
     --topo: #17191f; --topo-texto: #c9ccd3;
     --fundo: #f4f5f7; --cartao: #fff; --texto: #1b1f27; --suave: #5f6673; --borda: #e3e5e9;
-    --azul: #2357d9; --azul-claro: #e8eefc; --verde: #1d8a4e; --verde-claro: #e5f5ec;
-    --amarelo: #a86b00; --amarelo-claro: #fff4dc; --vermelho: #c0392b; --vermelho-claro: #fdecea;
+    --azul: #2357d9; --azul-claro: #e8eefc; --verde: #176b3d; --verde-claro: #e5f5ec;
+    --amarelo: #8a5700; --amarelo-claro: #fff4dc; --vermelho: #c0392b; --vermelho-claro: #fdecea;
     --sombra: 0 1px 2px rgba(16,24,40,.05), 0 1px 3px rgba(16,24,40,.06);
   }
   * { box-sizing: border-box; }
+  html { scroll-padding-top: 80px; }
+  button, a, summary { transition: background-color .15s ease, border-color .15s ease, color .15s ease; }
+  :focus-visible { outline: 2px solid var(--anel); outline-offset: 2px; }
+  @media (prefers-reduced-motion: reduce) { * { transition: none !important; scroll-behavior: auto !important; } }
   body { margin: 0; font: 15px/1.5 "Inter", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; background: var(--fundo); color: var(--texto); }
   a { color: var(--marca-escura); }
   header { background: var(--topo); padding: 10px 16px; display: flex; gap: 20px; align-items: center; flex-wrap: wrap; position: sticky; top: 0; z-index: 5; box-shadow: 0 2px 8px rgba(0,0,0,.15); }
@@ -23,9 +27,9 @@
   nav { display: flex; gap: 2px; flex-wrap: wrap; }
   nav button { background: none; border: 0; padding: 8px 12px; border-radius: 8px; cursor: pointer; font: inherit; font-size: 14px; color: var(--topo-texto); }
   nav button:hover { color: #fff; background: rgba(255,255,255,.06); }
-  nav button.ativo { background: var(--marca); color: #fff; font-weight: 600; }
+  nav button.ativo { background: var(--marca-escura); color: #fff; font-weight: 600; }
   .contador { background: #fff; color: var(--marca-escura); border-radius: 10px; padding: 0 7px; font-size: 12px; margin-left: 4px; font-weight: 700; }
-  nav button:not(.ativo) .contador { background: var(--marca); color: #fff; }
+  nav button:not(.ativo) .contador { background: var(--marca-escura); color: #fff; }
   #topo-direita { margin-left: auto; display: flex; gap: 12px; align-items: center; color: var(--topo-texto); font-size: 12px; }
   #topo-direita button { background: none; border: 1px solid #3a3e48; color: var(--topo-texto); border-radius: 6px; padding: 4px 10px; cursor: pointer; font: inherit; }
   .status-ml { display: inline-flex; align-items: center; gap: 12px; cursor: default; }
@@ -44,14 +48,15 @@
   .pergunta { font-size: 17px; font-weight: 600; margin: 6px 0 8px; }
   .suave { color: var(--suave); font-size: 13px; }
   textarea, input, select { width: 100%; font: inherit; padding: 9px 11px; border: 1px solid var(--borda); border-radius: 8px; background: #fff; color: var(--texto); }
-  textarea:focus, input:focus, select:focus { outline: 2px solid var(--marca-clara); border-color: var(--marca); }
+  textarea:focus, input:focus, select:focus { outline: 3px solid #ffd2b8; outline-offset: 0; border-color: var(--marca-escura); }
   textarea { min-height: 84px; resize: vertical; }
   label { display: block; font-size: 13px; color: var(--suave); margin: 10px 0 4px; }
   button.acao { font: inherit; font-size: 14px; padding: 8px 14px; border-radius: 8px; border: 1px solid var(--borda); background: #fff; cursor: pointer; color: var(--texto); }
   button.acao:hover { border-color: #c8ccd3; }
-  button.principal { background: var(--marca); border-color: var(--marca); color: #fff; font-weight: 600; }
-  button.principal:hover { background: var(--marca-escura); border-color: var(--marca-escura); }
-  button.acao:disabled { opacity: .45; cursor: not-allowed; }
+  button.principal { background: var(--marca-escura); border-color: var(--marca-escura); color: #fff; font-weight: 600; }
+  button.principal:hover { background: var(--marca-hover); border-color: var(--marca-hover); }
+  button.acao:disabled { opacity: 1; background: #eef0f3; border-color: var(--borda); color: #5f6673; cursor: not-allowed; font-weight: 500; }
+  button.acao[aria-busy=true] { cursor: progress; }
   .vazio { text-align: center; color: var(--suave); padding: 40px 0; }
   .vazio b { display: block; font-size: 17px; color: var(--texto); margin-bottom: 4px; }
   .grade2 { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
@@ -60,7 +65,7 @@
   .indicador .valor { font-size: 24px; font-weight: 700; line-height: 1.2; }
   .indicador .rotulo { font-size: 12px; color: var(--suave); text-transform: uppercase; letter-spacing: .4px; }
   .indicador.destaque .valor { color: var(--marca-escura); }
-  @media (max-width: 760px) { .grade2 { grid-template-columns: 1fr; } .indicadores { grid-template-columns: 1fr 1fr; } #topo-direita { display: none; } }
+  @media (max-width: 760px) { button.acao, nav button, .filtros button { min-height: 44px; } textarea, input, select { font-size: 16px; } .grade2 { grid-template-columns: 1fr; } .indicadores { grid-template-columns: 1fr 1fr; } #topo-direita { display: none; } }
   .filtros { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 12px; }
   .filtros button { font: inherit; font-size: 13px; padding: 4px 12px; border-radius: 999px; border: 1px solid var(--borda); background: #fff; cursor: pointer; color: var(--suave); }
   .filtros button.ativo { background: var(--texto); border-color: var(--texto); color: #fff; }
@@ -93,27 +98,27 @@
   <h2 style="margin:0 0 4px">Bot de perguntas</h2>
   <p class="explica">Entre com a senha do painel.</p>
   <form onsubmit="entrar(event)">
-    <input type="password" id="senha" placeholder="Senha" autofocus>
+    <input type="password" id="senha" placeholder="Senha" aria-label="Senha do painel" autocomplete="current-password" autofocus>
     <div style="margin-top:12px"><button class="acao principal" type="submit">Entrar</button></div>
-    <p id="erro-entrar" class="suave" style="color:var(--vermelho)"></p>
+    <p id="erro-entrar" class="suave" style="color:var(--vermelho)" role="alert"></p>
   </form>
 </div>
 
 <div id="app" style="display:none">
   <header>
     <a class="marca" href="/"><img src="/logo.png" alt="MCS Brasil"><span>Bot de perguntas</span></a>
-    <nav>
+    <nav aria-label="Seções do painel">
       <button data-aba="pendentes" class="ativo">Pendentes <span id="n-pendentes"></span></button>
       <button data-aba="frequentes">Perguntas frequentes</button>
       <button data-aba="prontas">Respostas prontas</button>
       <button data-aba="comparar">Respondidas</button>
       <button data-aba="conexao">Conexão</button>
     </nav>
-    <div id="topo-direita"><span class="status-ml" id="status-ml"></span><span id="rodape-versao"></span><button onclick="sair()">Sair</button></div>
+    <div id="topo-direita"><span class="status-ml" id="status-ml"></span><span id="rodape-versao"></span><button onclick="sair()" aria-label="Sair do painel">Sair</button></div>
   </header>
   <main id="conteudo"></main>
 </div>
-<div id="toast"></div>
+<div id="toast" role="status" aria-live="polite"></div>
 
 <script>
 const $ = (s) => document.querySelector(s);
@@ -201,15 +206,28 @@ async function iniciar() {
   await carregarEstado();
   const p = new URLSearchParams(location.search);
   if (p.get('conectado')) { toast('Mercado Livre conectado.'); history.replaceState(null, '', '/'); }
-  mostrar(aba);
+  const inicial = location.hash.slice(1);
+  mostrar(['pendentes', 'frequentes', 'prontas', 'comparar', 'conexao'].includes(inicial) ? inicial : aba);
+  window.addEventListener('hashchange', () => { const h = location.hash.slice(1); if (h && h !== aba) mostrar(h); });
   setInterval(() => { if (aba === 'pendentes' && !document.querySelector('textarea:focus')) mostrar('pendentes', true); else carregarEstado(); }, 60_000);
 }
 
-document.querySelectorAll('nav button').forEach((b) => b.onclick = () => mostrar(b.dataset.aba));
+document.querySelectorAll('nav button').forEach((b) => b.onclick = () => { history.pushState(null, '', `#${b.dataset.aba}`); mostrar(b.dataset.aba); });
+// Botão "ocupado" enquanto espera o servidor (evita clique duplo).
+async function ocupado(btn, texto, fn) {
+  if (!btn || btn.disabled) return fn();
+  const antes = btn.textContent;
+  btn.disabled = true; btn.setAttribute('aria-busy', 'true'); btn.textContent = texto;
+  try { return await fn(); } finally { if (btn.isConnected) { btn.disabled = false; btn.removeAttribute('aria-busy'); btn.textContent = antes; } }
+}
 
 async function mostrar(nome, silencioso) {
   aba = nome;
-  document.querySelectorAll('nav button').forEach((b) => b.classList.toggle('ativo', b.dataset.aba === nome));
+  if (location.hash.slice(1) !== nome) history.replaceState(null, '', `#${nome}`);
+  document.querySelectorAll('nav button').forEach((b) => {
+    b.classList.toggle('ativo', b.dataset.aba === nome);
+    if (b.dataset.aba === nome) b.setAttribute('aria-current', 'page'); else b.removeAttribute('aria-current');
+  });
   if (!silencioso) $('#conteudo').innerHTML = '<p class="vazio">Carregando…</p>';
   try {
     await carregarEstado();
@@ -267,7 +285,7 @@ async function telaPendentes() {
       <b>${lista.length} pergunta(s) esperando resposta</b>
       <p class="explica" style="margin:4px 0 0">Cada pergunta já vem com uma sugestão: uma resposta pronta, quando alguma casa, ou a IA usando a ficha do anúncio.
       ${envio ? 'Revise e clique em Enviar.' : '<b>O envio está desligado</b> (o Gobots ainda responde): por enquanto o sistema só sugere, para compararmos.'}</p>
-    </div><button class="acao" onclick="sincronizar()">Buscar agora</button></div></div>`;
+    </div><button class="acao" onclick="sincronizar(this)">Buscar agora</button></div></div>`;
   if (!todas.length) return h + `<div class="vazio"><b>Tudo respondido</b>Nenhuma pergunta esperando. O sistema busca novas a cada poucos minutos.</div>`;
   const chaves = Object.keys(porAssunto);
   if (chaves.length > 1) {
@@ -283,37 +301,41 @@ async function telaPendentes() {
       <div class="linha entre"><span class="suave">${linkAnuncio(p)}</span><span class="suave">${haQuanto(p.criadaEm)}</span></div>
       <div class="pergunta">${esc(p.texto)}</div>
       <div class="linha"><span class="etiqueta">${esc(p.assuntoNome)}</span>${etiquetaOrigem(p)}<span class="suave">${esc(p.sugestaoMotivo || '')}</span></div>
-      <label>Resposta</label>
+      <label for="t-${p.id}">Resposta</label>
       <textarea id="t-${p.id}" maxlength="2000" oninput="contar(this)">${esc(p.sugestao || '')}</textarea>
       <div class="contagem" data-para="t-${p.id}">${(p.sugestao || '').length}/2000</div>
       <div class="linha" style="margin-top:6px">
-        <button class="acao principal" onclick="enviar(${p.id})" ${envio ? '' : 'disabled title="Envio desligado (ML_ENVIO_HABILITADO)"'}>Enviar ao Mercado Livre</button>
+        <button class="acao principal" onclick="enviar(${p.id}, this)" ${envio ? '' : 'disabled title="Envio desligado (ML_ENVIO_HABILITADO)"'}>Enviar ao Mercado Livre</button>
         ${envio ? '' : `<button class="acao" onclick="copiar(${p.id})">Copiar resposta</button>`}
-        <button class="acao" onclick="refazer(${p.id})">Refazer sugestão</button>
+        <button class="acao" onclick="refazer(${p.id}, this)">Refazer sugestão</button>
         <button class="acao" onclick="novaProntaDe(${esc(JSON.stringify({ texto: p.texto, resposta: p.sugestao || "", assunto: p.assunto, itemId: p.itemId }))})">Virar resposta pronta</button>
       </div></div>`;
   }
   return h;
 }
 
-async function sincronizar() {
-  toast('Buscando perguntas no Mercado Livre…');
-  try {
-    const r = await api('/api/sincronizar', { metodo: 'POST' });
-    toast(r.erro ? `Falhou: ${r.erro}` : `${r.pendentes} pendente(s), ${r.novas} nova(s), ${r.resolvidasFora} respondida(s) por fora.`);
-    mostrar('pendentes', true);
-  } catch (e) { toast(e.message); }
+async function sincronizar(btn) {
+  await ocupado(btn, 'Buscando…', async () => {
+    try {
+      const r = await api('/api/sincronizar', { metodo: 'POST' });
+      toast(r.erro ? `Falhou: ${r.erro}` : `${r.pendentes} pendente(s), ${r.novas} nova(s), ${r.resolvidasFora} respondida(s) por fora.`);
+      await mostrar('pendentes', true);
+    } catch (e) { toast(e.message); }
+  });
 }
-async function refazer(id) {
-  toast('Montando nova sugestão…');
-  try { await api(`/api/perguntas/${id}/sugestao`, { metodo: 'POST' }); mostrar('pendentes', true); } catch (e) { toast(e.message); }
+async function refazer(id, btn) {
+  await ocupado(btn, 'Montando…', async () => {
+    try { await api(`/api/perguntas/${id}/sugestao`, { metodo: 'POST' }); await mostrar('pendentes', true); } catch (e) { toast(e.message); }
+  });
 }
-async function enviar(id) {
+async function enviar(id, btn) {
   const texto = $(`#t-${id}`).value.trim();
   if (!texto) return toast('Escreva a resposta antes de enviar.');
   if (!confirm('Enviar esta resposta ao Mercado Livre? Ela fica pública no anúncio.')) return;
-  try { await api(`/api/perguntas/${id}/responder`, { metodo: 'POST', corpo: { texto } }); toast('Resposta enviada.'); mostrar('pendentes', true); }
-  catch (e) { toast(e.message); }
+  await ocupado(btn, 'Enviando…', async () => {
+    try { await api(`/api/perguntas/${id}/responder`, { metodo: 'POST', corpo: { texto } }); toast('Resposta enviada.'); await mostrar('pendentes', true); }
+    catch (e) { toast(e.message); }
+  });
 }
 
 // ---------------- Frequentes ----------------

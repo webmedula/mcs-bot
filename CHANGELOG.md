@@ -10,6 +10,7 @@
 - **Painel com visual novo e logo da MCS**: topo escuro com o logo, cores da marca, ícone na aba do navegador e o número de pendentes no título da aba. Bolinhas no topo mostram se o ML está conectado, se a IA tem chave e se o envio está ligado.
 - Pendentes: indicadores (pendentes, a mais antiga, tempo de resposta e respostas prontas ativas), filtro por assunto, uma faixa colorida em cada pergunta (verde = resposta pronta, azul = IA, amarelo = precisa de uma pessoa) e um contador de caracteres.
 - Botão **Copiar resposta** enquanto o envio está desligado, para colar no ML à mão. Botão **Sair** no topo.
+- Revisão de acessibilidade e uso (checklist da skill UI/UX Pro Max): contraste mínimo 4.5:1 nos botões e etiquetas (laranja mais escuro onde há texto branco), anel de foco visível no teclado, botões de 44px e campos de 16px no celular, rótulos ligados aos campos, avisos lidos por leitor de tela, aba atual no endereço (`#pendentes`, `#prontas`...) com o botão Voltar funcionando, e botões que mostram "Enviando…/Buscando…" e não aceitam clique duplo.
 
 ## 0.3.0 (2026-11-10)
 
