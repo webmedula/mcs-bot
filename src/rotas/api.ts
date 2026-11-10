@@ -16,6 +16,8 @@ import {
   encontrarRespostaPronta,
   listarRespostasProntas,
 } from '../nucleo/respostasProntas';
+import { carregarProntasIniciais } from '../nucleo/prontasIniciais';
+import { gravarRegrasDaLoja, lerRegrasDaLoja, REGRAS_PADRAO } from '../nucleo/regrasDaLoja';
 import {
   EnvioBloqueadoError,
   estadoDoHistorico,
@@ -139,6 +141,20 @@ export async function rotasApi(app: FastifyInstance): Promise<void> {
       apagarRespostaPronta(Number((req.params as any).id));
       return { ok: true };
     });
+    p.post('/api/respostas-prontas/carregar-iniciais', async () => {
+      const r = carregarProntasIniciais();
+      return { ...r, pendentesAtualizadas: reaplicarRespostasProntas() };
+    });
+
+    p.get('/api/regras-da-loja', async () => ({ texto: lerRegrasDaLoja(), padrao: REGRAS_PADRAO }));
+    p.put('/api/regras-da-loja', async (req, reply) => {
+      try {
+        return { texto: gravarRegrasDaLoja(String((req.body as any)?.texto ?? '')) };
+      } catch (err) {
+        return erro(reply, err);
+      }
+    });
+
     /** Testa uma pergunta inventada: qual resposta pronta casaria e qual assunto. */
     p.post('/api/respostas-prontas/testar', async (req) => {
       const { texto, itemId } = (req.body ?? {}) as { texto?: string; itemId?: string };

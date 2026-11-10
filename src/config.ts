@@ -49,7 +49,7 @@ export const config = {
 
   // ---------- Texto das respostas ----------
   saudacao: process.env.RESPOSTA_SAUDACAO ?? 'Olá!',
-  assinatura: process.env.RESPOSTA_ASSINATURA ?? 'Agradecemos o contato. Equipe MCS.',
+  assinatura: process.env.RESPOSTA_ASSINATURA ?? 'Atenciosamente, equipe MCS.',
 
   // ---------- IA (mesmas variáveis do Gerente IA) ----------
   /** 'anthropic' | 'openrouter'. Vazio = usa a chave que existir (com as duas, OpenRouter). */

@@ -143,7 +143,10 @@ export function encontrarRespostaPronta(pergunta: string, itemId: string | null,
 
 const reais = (v: number | null | undefined) => (v != null ? `R$ ${v.toFixed(2).replace('.', ',')}` : '');
 
-/** Troca {titulo}, {preco}, {preco_cheio}, {estoque}, {garantia} e {sku} pelos dados do anúncio. */
+/**
+ * Troca {titulo}, {preco}, {preco_cheio}, {estoque}, {garantia} e {sku} pelos dados do anúncio.
+ * {campo|texto} usa o texto quando o anúncio não tem o dado: {garantia|informada na descrição}.
+ */
 export function preencherModelo(texto: string, ficha: FichaDoProduto | null): string {
   const valores: Record<string, string> = {
     titulo: ficha?.titulo ?? '',
@@ -153,5 +156,8 @@ export function preencherModelo(texto: string, ficha: FichaDoProduto | null): st
     garantia: ficha?.garantia ?? '',
     sku: ficha?.sku ?? '',
   };
-  return texto.replace(/\{(titulo|preco_cheio|preco|estoque|garantia|sku)\}/gi, (_, chave: string) => valores[chave.toLowerCase()] ?? '');
+  return texto.replace(
+    /\{(titulo|preco_cheio|preco|estoque|garantia|sku)(?:\|([^}]*))?\}/gi,
+    (_, chave: string, alternativa?: string) => valores[chave.toLowerCase()] || (alternativa ?? '').trim(),
+  );
 }

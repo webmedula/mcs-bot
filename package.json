@@ -1,6 +1,6 @@
 {
   "name": "mcs-bot",
-  "version": "0.3.0",
+  "version": "0.4.0",
   "description": "Respostas automáticas às perguntas dos marketplaces (começa pelo Mercado Livre). Substitui o Gobots.",
   "main": "dist/index.js",
   "private": true,

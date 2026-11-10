@@ -1,5 +1,17 @@
 # Changelog
 
+## 0.4.0 (2026-11-10)
+
+- **Regras da loja** editáveis no painel (aba Respostas prontas): horário de envio, retirada, troca, nota fiscal etc. A IA lê esse texto antes de responder; mudar o texto muda as respostas na hora. Vem preenchido com as regras da planilha do Gobots, já adaptadas ao ML.
+- **Respostas prontas iniciais** (9), tiradas da planilha do Gobots e adaptadas da Shopee para o ML: nota fiscal, novo/original, garantia, prazo de entrega, prazo de envio, presente, cores, troca/devolução (as duas regras juntas) e retirada no local. Um botão carrega as que faltam, sem duplicar.
+- Modelos aceitam texto alternativo: `{garantia|informada na descrição do anúncio}`.
+- Voltagem, potência e medidas: a IA só responde com o que estiver no anúncio; senão, passa para uma pessoa.
+- Assinatura padrão: "Atenciosamente, equipe MCS." (como na planilha).
+- **Painel com visual novo e logo da MCS**: topo escuro com o logo, cores da marca, ícone na aba do navegador e o número de pendentes no título da aba. Bolinhas no topo mostram se o ML está conectado, se a IA tem chave e se o envio está ligado.
+- Pendentes: indicadores (pendentes, a mais antiga, tempo de resposta e respostas prontas ativas), filtro por assunto, uma faixa colorida em cada pergunta (verde = resposta pronta, azul = IA, amarelo = precisa de uma pessoa) e um contador de caracteres.
+- Botão **Copiar resposta** enquanto o envio está desligado, para colar no ML à mão. Botão **Sair** no topo.
+- Revisão de acessibilidade e uso (checklist da skill UI/UX Pro Max): contraste mínimo 4.5:1 nos botões e etiquetas (laranja mais escuro onde há texto branco), anel de foco visível no teclado, botões de 44px e campos de 16px no celular, rótulos ligados aos campos, avisos lidos por leitor de tela, aba atual no endereço (`#pendentes`, `#prontas`...) com o botão Voltar funcionando, e botões que mostram "Enviando…/Buscando…" e não aceitam clique duplo.
+
 ## 0.3.0 (2026-11-10)
 
 - IA pelo OpenRouter, com as mesmas variáveis do Gerente IA (`OPENROUTER_API_KEY`; `ASSISTENTE_MODELO` e `ASSISTENTE_PROVEDOR` opcionais). Sem modelo definido, usa o Claude Sonnet mais novo do catálogo do OpenRouter. A Anthropic direta continua funcionando. O painel mostra o provedor, o modelo e o que falta configurar.

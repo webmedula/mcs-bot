@@ -3,6 +3,7 @@ import { config } from '../config';
 import { completar, iaConfigurada } from '../ia/provedor';
 import { logger } from '../logger';
 import { nomeDoAssunto } from './assuntos';
+import { lerRegrasDaLoja } from './regrasDaLoja';
 import { gravarSugestao, lerPergunta, type Pergunta, type Sugestao } from './perguntas';
 import { contarUso, encontrarRespostaPronta, preencherModelo } from './respostasProntas';
 import type { FichaDoProduto } from './tipos';
@@ -73,8 +74,11 @@ export function fichaEmTexto(f: FichaDoProduto): string {
 const SISTEMA = `Você responde perguntas de compradores em anúncios de autopeças de uma loja no Mercado Livre.
 
 REGRAS (obrigatórias):
-- Use SOMENTE as informações da ficha do anúncio e das respostas anteriores fornecidas. Nunca invente
-  medida, compatibilidade, prazo, marca, garantia ou qualquer dado que não esteja ali.
+- Use SOMENTE as informações da ficha do anúncio, das REGRAS DA LOJA e das respostas anteriores
+  fornecidas. Nunca invente medida, voltagem, compatibilidade, prazo, marca, garantia ou qualquer dado
+  que não esteja ali. Se as regras da loja e uma resposta anterior divergirem, valem as regras da loja.
+- Voltagem, potência e medidas: só o que estiver nos atributos, no título ou na descrição do anúncio.
+  Se não estiver, marque precisa_humano.
 - Compatibilidade com veículo: só confirme se o veículo (modelo E ano) estiver na tabela de
   compatibilidade ou escrito claramente no título/descrição. Na dúvida, não confirme: marque que
   precisa de humano.
@@ -126,6 +130,9 @@ export async function sugerirComIa(p: Pergunta, ficha: FichaDoProduto | null): P
   const usuario = [
     `PERGUNTA DO COMPRADOR: ${p.texto}`,
     `Assunto detectado: ${nomeDoAssunto(p.assunto)}`,
+    '',
+    'REGRAS DA LOJA (valem para todos os anúncios):',
+    lerRegrasDaLoja() || '(nenhuma regra cadastrada)',
     '',
     'FICHA DO ANÚNCIO:',
     ficha ? fichaEmTexto(ficha) : '(não foi possível ler o anúncio)',
