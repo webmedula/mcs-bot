@@ -5,7 +5,7 @@ import { config, mlConfigurado } from '../config';
 import { fichaComCache, lerFichaDoMl } from '../conectores/mercadolivre/conector';
 import { ml } from '../conectores/mercadolivre/api';
 import { lerToken } from '../conectores/mercadolivre/oauth';
-import { iaConfigurada } from '../ia/anthropic';
+import { descricaoDaIa } from '../ia/provedor';
 import { classificarAssunto, nomeDoAssunto } from '../nucleo/assuntos';
 import { LISTA_DE_ASSUNTOS, perguntasFrequentes } from '../nucleo/frequentes';
 import { contarPorStatus, lerPergunta, listarPerguntas, tempoDeResposta, type FiltroPerguntas } from '../nucleo/perguntas';
@@ -44,7 +44,7 @@ function estadoGeral() {
       enderecoDeAvisos: `${config.baseUrl}/notificacoes/ml`,
       enderecoDeRetorno: config.mlRedirectUri,
     },
-    ia: { configurada: iaConfigurada(), modelo: config.iaModelo || '(automático)' },
+    ia: descricaoDaIa(),
     perguntas: contarPorStatus(),
     tempoDeResposta30d: tempoDeResposta(30),
     ultimaSincronizacao: lerEstado('ultima-sincronizacao'),

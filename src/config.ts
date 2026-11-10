@@ -51,12 +51,16 @@ export const config = {
   saudacao: process.env.RESPOSTA_SAUDACAO ?? 'Olá!',
   assinatura: process.env.RESPOSTA_ASSINATURA ?? 'Agradecemos o contato. Equipe MCS.',
 
-  // ---------- IA ----------
+  // ---------- IA (mesmas variáveis do Gerente IA) ----------
+  /** 'anthropic' | 'openrouter'. Vazio = usa a chave que existir (com as duas, OpenRouter). */
+  iaProvedor: process.env.ASSISTENTE_PROVEDOR || '',
+  openrouterApiKey: process.env.OPENROUTER_API_KEY || '',
+  openrouterBaseUrl: semBarraFinal(process.env.OPENROUTER_BASE_URL || 'https://openrouter.ai/api/v1'),
   anthropicApiKey: process.env.ANTHROPIC_API_KEY || '',
   anthropicBaseUrl: semBarraFinal(process.env.ANTHROPIC_BASE_URL || 'https://api.anthropic.com'),
   anthropicVersion: process.env.ANTHROPIC_VERSION || '2023-06-01',
-  /** Vazio = pergunta à API quais modelos a chave tem e escolhe um Sonnet. */
-  iaModelo: process.env.IA_MODELO || process.env.ANTHROPIC_MODEL || '',
+  /** Id do modelo. Obrigatório no OpenRouter; vazio na Anthropic = escolhe um Sonnet da chave. */
+  iaModelo: process.env.ASSISTENTE_MODELO || process.env.IA_MODELO || process.env.ANTHROPIC_MODEL || '',
   iaMaxTokens: numero(process.env.IA_MAX_TOKENS, 800),
 };
 

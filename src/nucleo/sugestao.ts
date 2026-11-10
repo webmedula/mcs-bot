@@ -1,6 +1,6 @@
 import { banco } from '../banco';
 import { config } from '../config';
-import { completar, iaConfigurada } from '../ia/anthropic';
+import { completar, iaConfigurada } from '../ia/provedor';
 import { logger } from '../logger';
 import { nomeDoAssunto } from './assuntos';
 import { gravarSugestao, lerPergunta, type Pergunta, type Sugestao } from './perguntas';

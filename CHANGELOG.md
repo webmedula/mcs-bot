@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.3.0 (2026-11-10)
+
+- IA pelo OpenRouter, com as mesmas variáveis do Gerente IA (`OPENROUTER_API_KEY`, `ASSISTENTE_MODELO`, `ASSISTENTE_PROVEDOR`). A Anthropic direta continua funcionando. O painel mostra o provedor, o modelo e o que falta configurar.
+
 ## 0.2.0 (2026-11-10)
 
 - Preço real: usa `/items/{id}/sale_price`, o preço que o comprador vê com a promoção ativa, e o preço sem promoção. A IA sabe quando o valor é promocional; as respostas prontas ganham `{preco_cheio}` além de `{preco}`.

@@ -8,7 +8,7 @@ Responde as perguntas dos compradores nos marketplaces. Começa pelo Mercado Liv
 2. O sistema lê a ficha do anúncio (título, preço, estoque, garantia, atributos, descrição, compatibilidades).
 3. Monta a sugestão:
    - **resposta pronta**, se algum gatilho casa (a do anúncio vence a geral; o gatilho mais longo vence o curto);
-   - senão, a **IA**, usando só a ficha e as respostas anteriores do anúncio. Sem base, ela pede uma pessoa.
+   - senão, a **IA** (OpenRouter ou Anthropic, mesmas variáveis do Gerente), usando só a ficha e as respostas anteriores do anúncio. Sem base, ela pede uma pessoa.
 4. A sugestão aparece no painel para revisar e enviar. **Enquanto `ML_ENVIO_HABILITADO=false` nada é enviado**: o sistema roda ao lado do Gobots só sugerindo, e a aba "Respondidas" mostra o que o Gobots respondeu ao lado da nossa sugestão.
 
 Antes de enviar, o sistema confere no ML se a pergunta ainda está sem resposta.

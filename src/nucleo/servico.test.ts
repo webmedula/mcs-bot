@@ -52,6 +52,7 @@ describe('fluxo', () => {
     remoto.clear();
     respondidas.length = 0;
     config.anthropicApiKey = '';
+    config.openrouterApiKey = '';
     config.mlEnvioHabilitado = false;
   });
 
@@ -124,6 +125,7 @@ describe('respostas prontas novas', () => {
     bancoEmMemoriaParaTeste();
     remoto.clear();
     config.anthropicApiKey = '';
+    config.openrouterApiKey = '';
   });
 
   it('valem para as pendentes que já estavam sem sugestão', async () => {
