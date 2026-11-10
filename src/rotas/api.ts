@@ -1,0 +1,191 @@
+import type { FastifyInstance } from 'fastify';
+import { cookieDeLogin, cookieDeSaida, exigirApiKey, exigirLogin, logado, senhaConfere } from '../auth';
+import { banco, lerEstado } from '../banco';
+import { config, mlConfigurado } from '../config';
+import { fichaComCache, lerFichaDoMl } from '../conectores/mercadolivre/conector';
+import { ml } from '../conectores/mercadolivre/api';
+import { lerToken } from '../conectores/mercadolivre/oauth';
+import { iaConfigurada } from '../ia/anthropic';
+import { classificarAssunto, nomeDoAssunto } from '../nucleo/assuntos';
+import { LISTA_DE_ASSUNTOS, perguntasFrequentes } from '../nucleo/frequentes';
+import { contarPorStatus, lerPergunta, listarPerguntas, tempoDeResposta, type FiltroPerguntas } from '../nucleo/perguntas';
+import {
+  apagarRespostaPronta,
+  atualizarRespostaPronta,
+  criarRespostaPronta,
+  encontrarRespostaPronta,
+  listarRespostasProntas,
+} from '../nucleo/respostasProntas';
+import {
+  EnvioBloqueadoError,
+  estadoDoHistorico,
+  importarHistorico,
+  reaplicarRespostasProntas,
+  refazerSugestao,
+  responderPergunta,
+  sincronizarPendentes,
+} from '../nucleo/servico';
+import { VERSAO } from '../versao';
+
+function erro(reply: any, err: any, codigo = 400) {
+  reply.code(err instanceof EnvioBloqueadoError ? 409 : codigo);
+  return { mensagem: err?.message || String(err) };
+}
+
+function estadoGeral() {
+  const token = lerToken();
+  return {
+    versao: VERSAO,
+    mercadoLivre: {
+      appConfigurado: mlConfigurado(),
+      conectado: Boolean(token),
+      userId: token?.userId ?? null,
+      envioHabilitado: config.mlEnvioHabilitado,
+      enderecoDeAvisos: `${config.baseUrl}/notificacoes/ml`,
+      enderecoDeRetorno: config.mlRedirectUri,
+    },
+    ia: { configurada: iaConfigurada(), modelo: config.iaModelo || '(automático)' },
+    perguntas: contarPorStatus(),
+    tempoDeResposta30d: tempoDeResposta(30),
+    ultimaSincronizacao: lerEstado('ultima-sincronizacao'),
+    historico: estadoDoHistorico(),
+    respostasProntas: listarRespostasProntas().filter((r) => r.ativa).length,
+  };
+}
+
+export async function rotasApi(app: FastifyInstance): Promise<void> {
+  // ---------- Login do painel ----------
+  app.post('/painel/login', async (req, reply) => {
+    const { senha } = (req.body ?? {}) as { senha?: string };
+    if (!config.painelSenha) return erro(reply, new Error('Defina PAINEL_SENHA no servidor.'), 500);
+    if (!senhaConfere(String(senha ?? ''))) return erro(reply, new Error('Senha errada.'), 401);
+    reply.header('set-cookie', cookieDeLogin());
+    return { ok: true };
+  });
+  app.post('/painel/sair', async (_req, reply) => {
+    reply.header('set-cookie', cookieDeSaida());
+    return { ok: true };
+  });
+  app.get('/painel/sessao', async (req) => ({ logado: logado(req), senhaDefinida: Boolean(config.painelSenha) }));
+
+  // ---------- Painel (precisa de login) ----------
+  app.register(async (p) => {
+    p.addHook('preHandler', exigirLogin);
+
+    p.get('/api/painel/estado', async () => estadoGeral());
+    p.get('/api/assuntos', async () => LISTA_DE_ASSUNTOS);
+
+    p.get('/api/perguntas', async (req) => {
+      const q = req.query as Record<string, string | undefined>;
+      const f: FiltroPerguntas = {
+        status: (q.status as any) || undefined,
+        assunto: q.assunto || undefined,
+        busca: q.busca || undefined,
+        limite: q.limite ? Number(q.limite) : undefined,
+        comSugestao: q.comSugestao === '1',
+      };
+      return listarPerguntas(f).map((x) => ({ ...x, assuntoNome: nomeDoAssunto(x.assunto) }));
+    });
+
+    p.get('/api/perguntas/:id', async (req, reply) => {
+      const pg = lerPergunta(Number((req.params as any).id));
+      if (!pg) return erro(reply, new Error('Pergunta não encontrada.'), 404);
+      const linha = pg.itemId
+        ? (banco().prepare('SELECT ficha_json FROM produtos WHERE plataforma = ? AND item_id = ?').get(pg.plataforma, pg.itemId) as any)
+        : null;
+      return { ...pg, assuntoNome: nomeDoAssunto(pg.assunto), ficha: linha?.ficha_json ? JSON.parse(linha.ficha_json) : null };
+    });
+
+    p.post('/api/perguntas/:id/sugestao', async (req, reply) => {
+      try {
+        return await refazerSugestao(Number((req.params as any).id));
+      } catch (err) {
+        return erro(reply, err);
+      }
+    });
+
+    p.post('/api/perguntas/:id/responder', async (req, reply) => {
+      const { texto } = (req.body ?? {}) as { texto?: string };
+      try {
+        return await responderPergunta(Number((req.params as any).id), String(texto ?? ''), 'painel');
+      } catch (err) {
+        return erro(reply, err);
+      }
+    });
+
+    p.post('/api/sincronizar', async () => sincronizarPendentes());
+    p.post('/api/historico/importar', async () => importarHistorico());
+    p.get('/api/frequentes', async () => perguntasFrequentes(config.historicoMax));
+
+    // Respostas prontas
+    p.get('/api/respostas-prontas', async () => listarRespostasProntas());
+    p.post('/api/respostas-prontas', async (req, reply) => {
+      try {
+        const r = criarRespostaPronta(req.body as any);
+        return { ...r, pendentesAtualizadas: reaplicarRespostasProntas() };
+      } catch (err) {
+        return erro(reply, err);
+      }
+    });
+    p.put('/api/respostas-prontas/:id', async (req, reply) => {
+      try {
+        const r = atualizarRespostaPronta(Number((req.params as any).id), req.body as any);
+        return { ...r, pendentesAtualizadas: reaplicarRespostasProntas() };
+      } catch (err) {
+        return erro(reply, err);
+      }
+    });
+    p.delete('/api/respostas-prontas/:id', async (req) => {
+      apagarRespostaPronta(Number((req.params as any).id));
+      return { ok: true };
+    });
+    /** Testa uma pergunta inventada: qual resposta pronta casaria e qual assunto. */
+    p.post('/api/respostas-prontas/testar', async (req) => {
+      const { texto, itemId } = (req.body ?? {}) as { texto?: string; itemId?: string };
+      const c = encontrarRespostaPronta(String(texto ?? ''), itemId ? String(itemId).toUpperCase() : null);
+      const assunto = classificarAssunto(String(texto ?? ''));
+      return {
+        assunto,
+        assuntoNome: nomeDoAssunto(assunto),
+        casou: c ? { id: c.pronta.id, titulo: c.pronta.titulo, gatilho: c.gatilho, confianca: c.confianca } : null,
+      };
+    });
+
+    // Diagnóstico: o que o ML devolve de um anúncio, cru e já traduzido.
+    p.get('/debug/ml/item/:id', async (req, reply) => {
+      const id = String((req.params as any).id).toUpperCase();
+      try {
+        const [item, compat] = await Promise.all([
+          ml(`/items/${id}?include_attributes=all`).catch((e) => ({ erro: e.message })),
+          ml(`/items/${id}/compatibilities`).catch((e) => ({ erro: e.message })),
+        ]);
+        return { ficha: await lerFichaDoMl(id), itemCru: item, compatibilidadesCru: compat };
+      } catch (err) {
+        return erro(reply, err, 502);
+      }
+    });
+    p.post('/api/produtos/:id/atualizar', async (req, reply) => {
+      try {
+        return await fichaComCache(String((req.params as any).id).toUpperCase(), true);
+      } catch (err) {
+        return erro(reply, err, 502);
+      }
+    });
+  });
+
+  // ---------- Leitura para outros sistemas (Gerente IA), com x-api-key ----------
+  app.register(async (p) => {
+    p.addHook('preHandler', exigirApiKey);
+    p.get('/api/estado', async () => {
+      const pendentes = listarPerguntas({ status: 'pendente', limite: 50 }).map((x) => ({
+        pergunta: x.texto,
+        anuncio: x.itemTitulo || x.itemId,
+        criadaEm: x.criadaEm,
+        assunto: nomeDoAssunto(x.assunto),
+        temSugestao: Boolean(x.sugestao),
+        origemDaSugestao: x.sugestaoOrigem,
+      }));
+      return { ...estadoGeral(), pendentes };
+    });
+  });
+}
