@@ -117,8 +117,57 @@ export async function lerCompatibilidades(itemId: string): Promise<string[] | nu
   }
 }
 
+export interface PrecoAtual {
+  preco: number | null;
+  precoCheio: number | null;
+  emPromocao: boolean;
+  estoque: number | null;
+}
+
+function numero(v: unknown): number | null {
+  return v == null || v === '' || !Number.isFinite(Number(v)) ? null : Number(v);
+}
+
+/**
+ * Junta o que o anúncio diz (price, original_price) com /items/{id}/sale_price, que é o preço que
+ * o comprador vê com a promoção ativa (amount) e o preço cheio (regular_amount). O `price` do
+ * anúncio sozinho pode ser o preço cheio mesmo com campanha do ML rodando.
+ */
+export function montarPreco(item: any, salePrice: any | null): PrecoAtual {
+  const precoItem = numero(item?.price);
+  const original = numero(item?.original_price);
+  const venda = numero(salePrice?.amount);
+  const cheioVenda = numero(salePrice?.regular_amount);
+  const preco = venda ?? precoItem;
+  const precoCheio = cheioVenda ?? original ?? preco;
+  return {
+    preco,
+    precoCheio,
+    emPromocao: preco != null && precoCheio != null && precoCheio > preco + 0.009,
+    estoque: numero(item?.available_quantity),
+  };
+}
+
+async function lerSalePrice(itemId: string): Promise<any | null> {
+  try {
+    return await ml(`/items/${itemId}/sale_price?context=channel_marketplace`);
+  } catch {
+    return null;
+  }
+}
+
+/** Só preço e estoque, leve: roda a cada pergunta. */
+export async function lerPrecoAtual(itemId: string): Promise<PrecoAtual> {
+  const [item, venda] = await Promise.all([
+    ml(`/items/${itemId}?attributes=id,price,original_price,available_quantity`),
+    lerSalePrice(itemId),
+  ]);
+  return montarPreco(item, venda);
+}
+
 export async function lerFichaDoMl(itemId: string): Promise<FichaDoProduto> {
-  const item: any = await ml(`/items/${itemId}?include_attributes=all`);
+  const [item, venda]: [any, any] = await Promise.all([ml(`/items/${itemId}?include_attributes=all`), lerSalePrice(itemId)]);
+  const preco = montarPreco(item, venda);
   let descricao: string | null = null;
   try {
     const d: any = await ml(`/items/${itemId}/description`);
@@ -144,8 +193,8 @@ export async function lerFichaDoMl(itemId: string): Promise<FichaDoProduto> {
     itemId,
     titulo: texto(item?.title),
     permalink: texto(item?.permalink),
-    preco: item?.price != null ? Number(item.price) : null,
-    estoque: item?.available_quantity != null ? Number(item.available_quantity) : null,
+    ...preco,
+    precoLidoEm: agora(),
     condicao: item?.condition === 'new' ? 'novo' : item?.condition === 'used' ? 'usado' : texto(item?.condition),
     freteGratis: item?.shipping?.free_shipping != null ? Boolean(item.shipping.free_shipping) : null,
     garantia,
@@ -156,16 +205,30 @@ export async function lerFichaDoMl(itemId: string): Promise<FichaDoProduto> {
   };
 }
 
-/** Ficha guardada por 6 horas: anúncio não muda a cada pergunta, e poupa chamadas ao ML. */
+/**
+ * A ficha (atributos, descrição, compatibilidades) fica guardada por 6 horas: isso quase não muda e
+ * poupa chamadas ao ML. Preço e estoque, não: são relidos a cada pergunta, para nunca responder
+ * com valor velho.
+ */
 const VALIDADE_FICHA_MS = 6 * 60 * 60 * 1000;
 
 export async function fichaComCache(itemId: string, forcar = false): Promise<FichaDoProduto> {
   const db = banco();
   const linha = db.prepare("SELECT * FROM produtos WHERE plataforma = 'mercadolivre' AND item_id = ?").get(itemId) as any;
+  let ficha: FichaDoProduto;
   if (!forcar && linha?.ficha_json && Date.now() - Date.parse(linha.atualizado_em) < VALIDADE_FICHA_MS) {
-    return JSON.parse(linha.ficha_json);
+    ficha = JSON.parse(linha.ficha_json);
+    try {
+      ficha = { ...ficha, ...(await lerPrecoAtual(itemId)), precoLidoEm: agora() };
+    } catch (err: any) {
+      // Sem preço novo, não usa o velho: melhor a IA dizer que não sabe do que errar o valor.
+      logger.warn(`[ML] preço de ${itemId} não atualizou: ${err?.message || err}`);
+      ficha = { ...ficha, preco: null, precoCheio: null, emPromocao: false, estoque: null, precoLidoEm: null };
+    }
+    db.prepare("UPDATE produtos SET ficha_json = ? WHERE plataforma = 'mercadolivre' AND item_id = ?").run(JSON.stringify(ficha), itemId);
+    return ficha;
   }
-  const ficha = await lerFichaDoMl(itemId);
+  ficha = await lerFichaDoMl(itemId);
   db.prepare(
     `INSERT INTO produtos (plataforma, item_id, titulo, permalink, ficha_json, atualizado_em) VALUES ('mercadolivre', ?, ?, ?, ?, ?)
      ON CONFLICT(plataforma, item_id) DO UPDATE SET titulo = excluded.titulo, permalink = excluded.permalink,

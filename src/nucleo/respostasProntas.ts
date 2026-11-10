@@ -141,15 +141,17 @@ export function encontrarRespostaPronta(pergunta: string, itemId: string | null,
   return melhor;
 }
 
-/** Troca {titulo}, {preco}, {estoque}, {garantia} e {sku} pelos dados do anúncio. */
+const reais = (v: number | null | undefined) => (v != null ? `R$ ${v.toFixed(2).replace('.', ',')}` : '');
+
+/** Troca {titulo}, {preco}, {preco_cheio}, {estoque}, {garantia} e {sku} pelos dados do anúncio. */
 export function preencherModelo(texto: string, ficha: FichaDoProduto | null): string {
-  const preco = ficha?.preco != null ? `R$ ${ficha.preco.toFixed(2).replace('.', ',')}` : '';
   const valores: Record<string, string> = {
     titulo: ficha?.titulo ?? '',
-    preco,
+    preco: reais(ficha?.preco),
+    preco_cheio: reais(ficha?.precoCheio ?? ficha?.preco),
     estoque: ficha?.estoque != null ? String(ficha.estoque) : '',
     garantia: ficha?.garantia ?? '',
     sku: ficha?.sku ?? '',
   };
-  return texto.replace(/\{(titulo|preco|estoque|garantia|sku)\}/gi, (_, chave: string) => valores[chave.toLowerCase()] ?? '');
+  return texto.replace(/\{(titulo|preco_cheio|preco|estoque|garantia|sku)\}/gi, (_, chave: string) => valores[chave.toLowerCase()] ?? '');
 }

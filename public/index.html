@@ -285,7 +285,7 @@ function formPronta(r) {
     </div>
     <label>Gatilhos: um por linha. A resposta é usada quando a pergunta tem TODAS as palavras de um gatilho, em qualquer ordem.</label>
     <textarea name="gatilhos" style="min-height:70px" placeholder="nota fiscal&#10;emite nf">${esc((r.gatilhos || []).join('\n'))}</textarea>
-    <label>Texto da resposta. Pode usar {titulo}, {preco}, {estoque}, {garantia}. A saudação e a assinatura entram sozinhas.</label>
+    <label>Texto da resposta. Pode usar {titulo}, {preco} (o de agora, com promoção), {preco_cheio}, {estoque}, {garantia}. A saudação e a assinatura entram sozinhas.</label>
     <textarea name="texto" maxlength="2000" required>${esc(r.texto)}</textarea>
     <label class="linha" style="color:var(--texto)"><input type="checkbox" name="ativa" style="width:auto" ${r.ativa !== false ? 'checked' : ''}> Ativa</label>
     <div class="linha" style="margin-top:8px"><button class="acao principal" type="submit">Salvar</button>

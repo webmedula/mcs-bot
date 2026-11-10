@@ -11,7 +11,7 @@ const falso: Conector = {
   buscarPergunta: async (id) => remoto.get(id) ?? null,
   buscarHistorico: async () => ({ lidas: 0, parouPor: 'fim' }),
   fichaDoProduto: async (itemId) => ({
-    plataforma: 'mercadolivre', itemId, titulo: 'Farol Gol G5', permalink: null, preco: 100, estoque: 2, condicao: 'novo',
+    plataforma: 'mercadolivre', itemId, titulo: 'Farol Gol G5', permalink: null, preco: 100, precoCheio: 100, emPromocao: false, precoLidoEm: null, estoque: 2, condicao: 'novo',
     freteGratis: true, garantia: null, atributos: {}, descricao: null, compatibilidades: [], sku: null,
   }),
   responder: async (id, texto) => {
