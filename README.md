@@ -27,8 +27,8 @@ Antes de enviar, o sistema confere no ML se a pergunta ainda está sem resposta.
 
 Em developers.mercadolivre.com.br, crie um app só para este serviço:
 
-- URI de redirect: `https://SEU-DOMINIO/oauth/ml/callback`
-- URL de notificações: `https://SEU-DOMINIO/notificacoes/ml`
+- URI de redirect: `https://bot.mcs.ind.br/oauth/ml/callback`
+- URL de notificações: `https://bot.mcs.ind.br/notificacoes/ml`
 - Tópico: **Questions**. Permissões: perguntas (leitura e escrita) e anúncios.
 
 Depois, no painel, aba Conexão → "Conectar ao Mercado Livre".

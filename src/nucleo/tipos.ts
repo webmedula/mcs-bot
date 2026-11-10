@@ -29,8 +29,14 @@ export interface FichaDoProduto {
   itemId: string;
   titulo: string | null;
   permalink: string | null;
+  /** Preço que o comprador paga agora (com a promoção ativa, se houver). */
   preco: number | null;
+  /** Preço sem promoção. Igual a `preco` quando não há promoção. */
+  precoCheio: number | null;
+  emPromocao: boolean;
   estoque: number | null;
+  /** Quando preço e estoque foram lidos do ML (são relidos a cada pergunta). */
+  precoLidoEm: string | null;
   condicao: string | null;
   freteGratis: boolean | null;
   garantia: string | null;

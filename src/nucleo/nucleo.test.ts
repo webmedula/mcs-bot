@@ -4,7 +4,7 @@ import { classificarAssunto } from './assuntos';
 import { agruparPerguntas } from './frequentes';
 import { contarPorStatus, lerPergunta, salvarPergunta } from './perguntas';
 import { criarRespostaPronta, encontrarRespostaPronta, gatilhoCasa, preencherModelo } from './respostasProntas';
-import { limparDadosDeContato, lerJsonDaIa, montarTexto } from './sugestao';
+import { fichaEmTexto, limparDadosDeContato, lerJsonDaIa, montarTexto } from './sugestao';
 import { normalizar, palavras } from './texto';
 import type { PerguntaExterna } from './tipos';
 
@@ -72,9 +72,14 @@ describe('respostas prontas', () => {
   it('preenche as variáveis com a ficha', () => {
     const t = preencherModelo('{titulo} sai por {preco}, temos {estoque}.', {
       plataforma: 'mercadolivre', itemId: 'MLB1', titulo: 'Farol Gol', permalink: null, preco: 199.9, estoque: 3,
-      condicao: null, freteGratis: null, garantia: null, atributos: {}, descricao: null, compatibilidades: [], sku: null,
+      precoCheio: 249.9, emPromocao: true, precoLidoEm: null, condicao: null, freteGratis: null, garantia: null, atributos: {}, descricao: null, compatibilidades: [], sku: null,
     });
     expect(t).toBe('Farol Gol sai por R$ 199,90, temos 3.');
+    expect(preencherModelo('de {preco_cheio} por {preco}', {
+      plataforma: 'mercadolivre', itemId: 'MLB1', titulo: null, permalink: null, preco: 199.9, estoque: 3,
+      precoCheio: 249.9, emPromocao: true, precoLidoEm: null, condicao: null, freteGratis: null, garantia: null,
+      atributos: {}, descricao: null, compatibilidades: [], sku: null,
+    })).toBe('de R$ 249,90 por R$ 199,90');
   });
 });
 
@@ -130,5 +135,20 @@ describe('perguntas frequentes', () => {
     expect(r[0].grupos[0].quantidade).toBe(3);
     expect(r[0].grupos[0].respostaMaisUsada).toBe('Sim, emitimos.');
     expect(r[0].grupos[0].gatilhoSugerido).toMatch(/nota|fiscal|emite/);
+  });
+});
+
+describe('preço na ficha que vai para a IA', () => {
+  const base = {
+    plataforma: 'mercadolivre' as const, itemId: 'MLB1', titulo: 'Farol', permalink: null, estoque: 1, precoLidoEm: null,
+    condicao: null, freteGratis: null, garantia: null, atributos: {}, descricao: null, compatibilidades: [], sku: null,
+  };
+  it('mostra promoção e preço cheio', () => {
+    expect(fichaEmTexto({ ...base, preco: 36.99, precoCheio: 78.9, emPromocao: true })).toContain(
+      'Preço agora: R$ 36.99 (em promoção; preço sem promoção R$ 78.90)',
+    );
+  });
+  it('sem preço, manda não informar valor', () => {
+    expect(fichaEmTexto({ ...base, preco: null, precoCheio: null, emPromocao: false })).toContain('NÃO DISPONÍVEL');
   });
 });

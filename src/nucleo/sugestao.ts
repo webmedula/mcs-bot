@@ -47,7 +47,15 @@ export function limparDadosDeContato(t: string): string {
 export function fichaEmTexto(f: FichaDoProduto): string {
   const linhas: string[] = [];
   linhas.push(`Título: ${f.titulo ?? '(sem título)'}`);
-  if (f.preco != null) linhas.push(`Preço: R$ ${f.preco.toFixed(2)}`);
+  if (f.preco != null) {
+    linhas.push(
+      f.emPromocao && f.precoCheio != null
+        ? `Preço agora: R$ ${f.preco.toFixed(2)} (em promoção; preço sem promoção R$ ${f.precoCheio.toFixed(2)})`
+        : `Preço agora: R$ ${f.preco.toFixed(2)}`,
+    );
+  } else {
+    linhas.push('Preço: NÃO DISPONÍVEL agora (não informe valor).');
+  }
   if (f.estoque != null) linhas.push(`Estoque disponível: ${f.estoque}`);
   if (f.condicao) linhas.push(`Condição: ${f.condicao}`);
   if (f.freteGratis != null) linhas.push(`Frete grátis: ${f.freteGratis ? 'sim' : 'não'}`);
@@ -72,6 +80,8 @@ REGRAS (obrigatórias):
   precisa de humano.
 - Nunca escreva telefone, e-mail, link, rede social ou peça para negociar fora do Mercado Livre.
 - Não prometa prazo de entrega exato: o prazo aparece no anúncio ao informar o CEP.
+- Preço: use só o "Preço agora" da ficha. Se estiver em promoção, pode dizer que o valor é
+  promocional, sem prometer até quando vale. Não ofereça desconto que não esteja na ficha.
 - Português do Brasil, cordial, direto, no máximo 3 frases. Sem saudação e sem assinatura: elas são
   acrescentadas depois.
 - Se a pergunta for ofensiva, não for pergunta, ou você não tiver base para responder com certeza,

@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.2.0 (2026-11-10)
+
+- Preço real: usa `/items/{id}/sale_price`, o preço que o comprador vê com a promoção ativa, e o preço sem promoção. A IA sabe quando o valor é promocional; as respostas prontas ganham `{preco_cheio}` além de `{preco}`.
+- Preço e estoque são relidos do ML a cada pergunta (a ficha com atributos e descrição continua guardada por 6 horas). Se a leitura falhar, a sugestão sai sem valor em vez de usar um preço velho.
+- Endereço padrão nos exemplos: `bot.mcs.ind.br`.
+
 ## 0.1.0 (2026-11-10)
 
 Primeira versão. Só sugere: nenhuma resposta sai para o Mercado Livre enquanto `ML_ENVIO_HABILITADO=false`.
