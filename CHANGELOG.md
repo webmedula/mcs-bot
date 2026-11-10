@@ -2,7 +2,7 @@
 
 ## 0.3.0 (2026-11-10)
 
-- IA pelo OpenRouter, com as mesmas variáveis do Gerente IA (`OPENROUTER_API_KEY`, `ASSISTENTE_MODELO`, `ASSISTENTE_PROVEDOR`). A Anthropic direta continua funcionando. O painel mostra o provedor, o modelo e o que falta configurar.
+- IA pelo OpenRouter, com as mesmas variáveis do Gerente IA (`OPENROUTER_API_KEY`; `ASSISTENTE_MODELO` e `ASSISTENTE_PROVEDOR` opcionais). Sem modelo definido, usa o Claude Sonnet mais novo do catálogo do OpenRouter. A Anthropic direta continua funcionando. O painel mostra o provedor, o modelo e o que falta configurar.
 
 ## 0.2.0 (2026-11-10)
 

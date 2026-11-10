@@ -59,7 +59,7 @@ export const config = {
   anthropicApiKey: process.env.ANTHROPIC_API_KEY || '',
   anthropicBaseUrl: semBarraFinal(process.env.ANTHROPIC_BASE_URL || 'https://api.anthropic.com'),
   anthropicVersion: process.env.ANTHROPIC_VERSION || '2023-06-01',
-  /** Id do modelo. Obrigatório no OpenRouter; vazio na Anthropic = escolhe um Sonnet da chave. */
+  /** Id do modelo. Vazio = escolhe sozinho um Claude Sonnet (na Anthropic ou no catálogo do OpenRouter). */
   iaModelo: process.env.ASSISTENTE_MODELO || process.env.IA_MODELO || process.env.ANTHROPIC_MODEL || '',
   iaMaxTokens: numero(process.env.IA_MAX_TOKENS, 800),
 };

@@ -26,15 +26,13 @@ export function iaConfigurada(): boolean {
 /** Texto para o painel: qual provedor e modelo, ou o que falta. */
 export function descricaoDaIa(): { configurada: boolean; provedor: string | null; modelo: string; falta: string | null } {
   const p = provedorAtivo();
-  const falta = !p
-    ? 'Defina OPENROUTER_API_KEY (com ASSISTENTE_MODELO) ou ANTHROPIC_API_KEY.'
-    : p === 'openrouter' && !config.iaModelo
-      ? 'Com OpenRouter, defina ASSISTENTE_MODELO (o mesmo do Gerente serve).'
-      : null;
-  return { configurada: Boolean(p), provedor: p, modelo: config.iaModelo || (p === 'anthropic' ? '(automático)' : '(não definido)'), falta };
+  const falta = !p ? 'Defina OPENROUTER_API_KEY ou ANTHROPIC_API_KEY.' : null;
+  const auto = p === 'openrouter' ? modeloOpenRouter : modeloAnthropic;
+  return { configurada: Boolean(p), provedor: p, modelo: config.iaModelo || (auto ? `${auto} (automático)` : '(automático)'), falta };
 }
 
 let modeloAnthropic: string | null = null;
+let modeloOpenRouter: string | null = null;
 
 function cabecalhosAnthropic(): Record<string, string> {
   return { 'content-type': 'application/json', 'x-api-key': config.anthropicApiKey, 'anthropic-version': config.anthropicVersion };
@@ -67,9 +65,31 @@ async function completarAnthropic(sistema: string, usuario: string): Promise<{ t
   return { texto, modelo };
 }
 
+/**
+ * Sem ASSISTENTE_MODELO, escolhe no catálogo do OpenRouter o Claude Sonnet mais novo (a lista vem
+ * do próprio OpenRouter, então não envelhece no código). Sem Sonnet, qualquer Claude.
+ */
+export function escolherModeloOpenRouter(modelos: Array<{ id: string; created?: number }>): string | null {
+  const claude = modelos.filter((m) => /^anthropic\/claude/i.test(m.id) && !/:/.test(m.id));
+  const maisNovo = (lista: typeof claude) => [...lista].sort((a, b) => (b.created ?? 0) - (a.created ?? 0))[0]?.id ?? null;
+  return maisNovo(claude.filter((m) => /sonnet/i.test(m.id))) ?? maisNovo(claude);
+}
+
+async function resolverModeloOpenRouter(): Promise<string> {
+  if (config.iaModelo) return config.iaModelo;
+  if (modeloOpenRouter) return modeloOpenRouter;
+  const res = await fetch(`${config.openrouterBaseUrl}/models`, { headers: { Authorization: `Bearer ${config.openrouterApiKey}` } });
+  const corpo: any = await res.json().catch(() => ({}));
+  if (!res.ok) throw new Error(corpo?.error?.message || `Erro HTTP ${res.status} ao listar modelos do OpenRouter.`);
+  const escolhido = escolherModeloOpenRouter(corpo?.data ?? []);
+  if (!escolhido) throw new Error('Não achei um modelo Claude no OpenRouter. Defina ASSISTENTE_MODELO.');
+  modeloOpenRouter = escolhido;
+  logger.info(`[IA] modelo escolhido no OpenRouter: ${escolhido}`);
+  return escolhido;
+}
+
 async function completarOpenRouter(sistema: string, usuario: string): Promise<{ texto: string; modelo: string }> {
-  const modelo = config.iaModelo;
-  if (!modelo) throw new Error('Com OpenRouter é obrigatório definir ASSISTENTE_MODELO.');
+  const modelo = await resolverModeloOpenRouter();
   const res = await fetch(`${config.openrouterBaseUrl}/chat/completions`, {
     method: 'POST',
     headers: {

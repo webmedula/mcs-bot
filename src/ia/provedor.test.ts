@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { config } from '../config';
-import { completar, descricaoDaIa, provedorAtivo } from './provedor';
+import { completar, descricaoDaIa, escolherModeloOpenRouter, provedorAtivo } from './provedor';
 
 describe('escolha do provedor de IA', () => {
   beforeEach(() => {
@@ -22,11 +22,18 @@ describe('escolha do provedor de IA', () => {
     config.iaProvedor = 'anthropic';
     expect(provedorAtivo()).toBe('anthropic');
   });
-  it('OpenRouter sem modelo avisa no painel', () => {
+  it('OpenRouter sem modelo não bloqueia: escolhe o Claude Sonnet mais novo do catálogo', () => {
     config.openrouterApiKey = 'sk-or-x';
-    expect(descricaoDaIa().falta).toMatch(/ASSISTENTE_MODELO/);
-    config.iaModelo = 'anthropic/claude-sonnet';
     expect(descricaoDaIa().falta).toBeNull();
+    expect(escolherModeloOpenRouter([
+      { id: 'openai/gpt-x', created: 9 },
+      { id: 'anthropic/claude-sonnet-a', created: 1 },
+      { id: 'anthropic/claude-sonnet-b', created: 5 },
+      { id: 'anthropic/claude-sonnet-b:beta', created: 7 },
+      { id: 'anthropic/claude-haiku-c', created: 8 },
+    ])).toBe('anthropic/claude-sonnet-b');
+    expect(escolherModeloOpenRouter([{ id: 'anthropic/claude-haiku-c' }])).toBe('anthropic/claude-haiku-c');
+    expect(escolherModeloOpenRouter([{ id: 'openai/gpt-x' }])).toBeNull();
   });
   it('chama /chat/completions do OpenRouter com sistema e pergunta', async () => {
     config.openrouterApiKey = 'sk-or-x';
