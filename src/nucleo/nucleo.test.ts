@@ -87,7 +87,7 @@ describe('texto final da resposta', () => {
   it('acrescenta saudação e assinatura sem repetir', () => {
     const t = montarTexto('Sim, emitimos nota fiscal.');
     expect(t.startsWith('Olá!')).toBe(true);
-    expect(t.endsWith('Equipe MCS.')).toBe(true);
+    expect(t.endsWith('Atenciosamente, equipe MCS.')).toBe(true);
     expect(montarTexto(t)).toBe(t);
   });
 
