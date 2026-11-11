@@ -19,6 +19,10 @@ export interface GrupoDePerguntas {
   /** Resposta mais usada no histórico para esse grupo (o que o Gobots ou a equipe respondeu). */
   respostaMaisUsada: string | null;
   vezesDaResposta: number;
+  /** Quantas respostas do grupo eram mensagem automática (fora do horário etc.) e foram ignoradas. */
+  automaticasIgnoradas: number;
+  /** Já existe correção na Memória para a pergunta-exemplo. */
+  jaEnsinada?: boolean;
 }
 
 export interface AssuntoFrequente {
@@ -36,6 +40,20 @@ export interface PerguntaParaAgrupar {
 }
 
 const LIMIAR = 0.5;
+
+/**
+ * Mensagem automática (fora do horário, "não estamos disponíveis"...) não é resposta de verdade:
+ * não serve de exemplo nem de resposta pronta.
+ */
+const MARCAS_DE_AUTOMATICA = [
+  'nao estamos disponiveis', 'nao estamos disponivel', 'fora do horario', 'fora do nosso horario',
+  'nosso horario de atendimento', 'horario de atendimento e', 'retornaremos assim que', 'responderemos assim que',
+  'em breve retornaremos', 'em breve responderemos', 'no momento nao podemos responder',
+];
+export function ehRespostaAutomatica(texto: string | null | undefined): boolean {
+  const t = normalizar(texto || '');
+  return MARCAS_DE_AUTOMATICA.some((m) => t.includes(m));
+}
 
 function maisFrequentes<T>(itens: T[], chave: (t: T) => string): Array<{ item: T; vezes: number }> {
   const mapa = new Map<string, { item: T; vezes: number }>();
@@ -94,7 +112,9 @@ export function agruparPerguntas(lista: PerguntaParaAgrupar[], gruposPorAssunto 
           .slice(0, 2)
           .map(([w]) => w)
           .join(' ');
-        const respostas = maisFrequentes(g.membros.filter((m) => m.resposta), (m) => normalizar(m.resposta!));
+        const comResposta = g.membros.filter((m) => m.resposta);
+        const reais = comResposta.filter((m) => !ehRespostaAutomatica(m.resposta));
+        const respostas = maisFrequentes(reais, (m) => normalizar(m.resposta!));
         const exemplos = maisFrequentes(g.membros, (m) => normalizar(m.texto))
           .slice(0, 3)
           .map((e) => e.item.texto);
@@ -104,6 +124,7 @@ export function agruparPerguntas(lista: PerguntaParaAgrupar[], gruposPorAssunto 
           gatilhoSugerido: gatilho || g.centro.slice(0, 2).join(' '),
           respostaMaisUsada: respostas[0]?.item.resposta ?? null,
           vezesDaResposta: respostas[0]?.vezes ?? 0,
+          automaticasIgnoradas: comResposta.length - reais.length,
         };
       });
 
@@ -127,7 +148,12 @@ export function perguntasFrequentes(limite = 5000): { total: number; assuntos: A
        ORDER BY criada_em DESC LIMIT ?`,
     )
     .all(limite) as any[];
-  return { total: linhas.length, assuntos: agruparPerguntas(linhas) };
+  const assuntos = agruparPerguntas(linhas);
+  const ensinadas = new Set(
+    (banco().prepare('SELECT pergunta FROM correcoes WHERE ativa = 1').all() as any[]).map((l) => normalizar(l.pergunta)),
+  );
+  for (const a of assuntos) for (const g of a.grupos) g.jaEnsinada = g.exemplos.some((e) => ensinadas.has(normalizar(e)));
+  return { total: linhas.length, assuntos };
 }
 
 export const LISTA_DE_ASSUNTOS = [...ASSUNTOS.map((a) => ({ id: a.id, nome: a.nome })), ASSUNTO_OUTROS];

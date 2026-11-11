@@ -18,7 +18,7 @@ import {
 } from '../nucleo/respostasProntas';
 import { carregarProntasIniciais } from '../nucleo/prontasIniciais';
 import { visaoGeral } from '../nucleo/visaoGeral';
-import { apagarCorrecao, atualizarCorrecao, contarCorrecoes, listarCorrecoes } from '../nucleo/correcoes';
+import { apagarCorrecao, atualizarCorrecao, contarCorrecoes, listarCorrecoes, salvarCorrecaoAvulsa } from '../nucleo/correcoes';
 import { gravarRegrasDaLoja, lerRegrasDaLoja, REGRAS_PADRAO } from '../nucleo/regrasDaLoja';
 import {
   EnvioBloqueadoError,
@@ -140,6 +140,13 @@ export async function rotasApi(app: FastifyInstance): Promise<void> {
 
     // Memória de correções
     p.get('/api/correcoes', async () => listarCorrecoes());
+    p.post('/api/correcoes', async (req, reply) => {
+      try {
+        return salvarCorrecaoAvulsa((req.body ?? {}) as any);
+      } catch (err) {
+        return erro(reply, err);
+      }
+    });
     p.put('/api/correcoes/:id', async (req, reply) => {
       try {
         return atualizarCorrecao(Number((req.params as any).id), (req.body ?? {}) as any);

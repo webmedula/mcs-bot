@@ -106,4 +106,14 @@ describe('memória de correções', () => {
     expect(pg.lerPergunta(p.id)!.avaliacao).toBe('bot');
     expect(cor.listarCorrecoes()[0].ativa).toBe(false);
   });
+
+  it('frequentes: correção avulsa entra no pedido e não duplica', async () => {
+    cor.salvarCorrecaoAvulsa({ pergunta: 'Oi vocês aumentou o preço?', resposta: 'Os preços podem mudar conforme custos.', assunto: 'preco' });
+    cor.salvarCorrecaoAvulsa({ pergunta: 'Oi vocês aumentou o preço?', resposta: 'O preço do anúncio é o atual; ele pode mudar com os custos.', licao: 'Nunca prometer preço antigo.' });
+    expect(cor.listarCorrecoes()).toHaveLength(1);
+    expect(cor.listarCorrecoes()[0]).toMatchObject({ origem: 'frequentes', perguntaId: null, licao: 'Nunca prometer preço antigo.' });
+    const b = nova('9', 'Vocês aumentaram o preço?');
+    await sug.sugerirComIa(pg.lerPergunta(b.id)!, null);
+    expect(pedidos[0]).toContain('O preço do anúncio é o atual');
+  });
 });

@@ -472,13 +472,30 @@ async function enviar(id, btn) {
 }
 
 // ---------------- Frequentes ----------------
+const grupoFreq = {};
+async function ensinarGrupo(k, btn) {
+  const g = grupoFreq[k];
+  const resposta = $(`#fq-${k}`).value.trim();
+  if (!resposta) return toast('Escreva a resposta certa antes de ensinar.');
+  await ocupado(btn, 'Guardando…', async () => {
+    try {
+      await api('/api/correcoes', { metodo: 'POST', corpo: { pergunta: g.pergunta, resposta, licao: $(`#fql-${k}`).value, assunto: g.assunto } });
+      toast('Guardado na memória. O bot vai responder assim nas perguntas parecidas.');
+      await mostrar('frequentes', true);
+    } catch (e) { toast(e.message); }
+  });
+}
+function prontaDoGrupo(k) {
+  const g = grupoFreq[k];
+  novaProntaDe({ texto: g.pergunta, resposta: $(`#fq-${k}`).value, assunto: g.assunto, gatilho: g.gatilho });
+}
 async function telaFrequentes() {
   const hist = estado.historico;
   const f = await api('/api/frequentes');
   let h = avisosGerais();
   h += `<div class="cartao"><div class="linha entre"><div>
       <b>De onde vem esta lista</b>
-      <p class="explica" style="margin:4px 0 0">Do histórico de perguntas já respondidas no Mercado Livre (inclui o que o Gobots respondeu). O sistema agrupa por assunto e junta perguntas parecidas. Em cada grupo aparece a resposta mais usada, que você pode transformar em resposta pronta com um clique.</p>
+      <p class="explica" style="margin:4px 0 0">Do histórico de perguntas já respondidas no Mercado Livre (inclui o que o Gobots respondeu). O sistema agrupa por assunto e junta perguntas parecidas. Em cada grupo aparece a resposta mais usada (mensagens automáticas, como "não estamos disponíveis", ficam de fora). Edite se precisar e escolha: <b>Ensinar ao bot</b> (a IA usa como exemplo em perguntas parecidas) ou <b>Virar resposta pronta</b> (resposta fixa, sem IA, quando a pergunta tem as palavras do gatilho).</p>
       <p class="suave" style="margin:6px 0 0">${hist.rodando ? `Importando… ${hist.lidas} perguntas lidas até agora.` :
         hist.fim ? `Última importação: ${dataBr(hist.fim)}, ${hist.lidas} perguntas${hist.parouPor ? ` (${esc(hist.parouPor)})` : ''}.${hist.erro ? ` <span style="color:var(--vermelho)">Erro: ${esc(hist.erro)}</span>` : ''}` :
         'O histórico ainda não foi importado.'}</p>
@@ -490,14 +507,23 @@ async function telaFrequentes() {
     h += `<div class="cartao"><div class="linha entre"><b>${esc(a.nome)}</b><span class="suave">${a.quantidade} perguntas · ${a.percentual}%</span></div>
       <div class="barra" style="margin:8px 0 4px"><div style="width:${Math.min(100, a.percentual)}%"></div></div>
       <details ${f.assuntos.indexOf(a) < 2 ? 'open' : ''}><summary>Ver os ${a.grupos.length} grupos mais comuns</summary>`;
-    for (const g of a.grupos) {
+    a.grupos.forEach((g, i) => {
+      const k = `${a.assunto}-${i}`;
+      grupoFreq[k] = { pergunta: g.exemplos[0], assunto: a.assunto, gatilho: g.gatilhoSugerido };
+      const aviso = !g.respostaMaisUsada && g.automaticasIgnoradas
+        ? `<div class="suave" style="color:var(--amarelo)">As respostas desse grupo eram mensagens automáticas (ex.: "não estamos disponíveis") e foram ignoradas. Escreva a resposta certa.</div>` : '';
       h += `<div style="border-top:1px solid var(--borda);padding-top:10px;margin-top:10px">
-        <div class="linha entre"><b>${g.quantidade}× parecidas</b><span class="suave">gatilho sugerido: <code>${esc(g.gatilhoSugerido)}</code></span></div>
+        <div class="linha entre"><b>${g.quantidade}× parecidas ${g.jaEnsinada ? '<span class="etiqueta verde">já está na memória</span>' : ''}</b><span class="suave">gatilho sugerido: <code>${esc(g.gatilhoSugerido)}</code></span></div>
         <ul style="margin:6px 0">${g.exemplos.map((e) => `<li>${esc(e)}</li>`).join('')}</ul>
-        ${g.respostaMaisUsada ? `<div class="suave">Resposta mais usada (${g.vezesDaResposta}×):</div><div class="caixa">${esc(g.respostaMaisUsada)}</div>` : ''}
-        <div style="margin-top:8px"><button class="acao" onclick="novaProntaDe(${esc(JSON.stringify({ texto: g.exemplos[0], resposta: g.respostaMaisUsada || "", assunto: a.assunto, gatilho: g.gatilhoSugerido }))})">Virar resposta pronta</button></div>
+        ${aviso}
+        <label for="fq-${k}">${g.respostaMaisUsada ? `Melhor resposta (veio da mais usada, ${g.vezesDaResposta}×; edite se precisar)` : 'Melhor resposta'}</label>
+        <textarea id="fq-${k}" maxlength="2000" placeholder="Escreva como a loja deve responder esse tipo de pergunta">${esc(g.respostaMaisUsada || '')}</textarea>
+        <input id="fql-${k}" maxlength="500" style="margin-top:6px" placeholder="Por quê? (opcional: vira uma regra que o bot segue sempre)">
+        <div class="linha" style="margin-top:8px">
+          <button class="acao principal" onclick="ensinarGrupo('${k}', this)">Ensinar ao bot</button>
+          <button class="acao" onclick="prontaDoGrupo('${k}')">Virar resposta pronta</button></div>
       </div>`;
-    }
+    });
     h += '</details></div>';
   }
   return h;
@@ -689,7 +715,7 @@ async function telaMemoria() {
     <p class="suave" style="margin:8px 0 0">Entra na memória quando você: clica em <b>Ensinar ao bot</b> numa pendente; envia pelo painel uma resposta bem diferente da sugestão; ou escolhe na aba <b>Respondidas</b> que a resposta do Gobots era melhor.</p>
     <p style="margin:8px 0 0"><b>${ativas}</b> correção(ões) ativa(s), <b>${licoes}</b> com lição.</p></div>`;
   if (!lista.length) return h + '<div class="vazio"><b>Memória vazia</b>Corrija uma sugestão em Pendentes ou em Respondidas e clique em "Ensinar ao bot".</div>';
-  const origens = { ensinar: 'ensinada no painel', envio: 'enviada pelo painel', gobots: 'resposta do Gobots' };
+  const origens = { ensinar: 'ensinada no painel', envio: 'enviada pelo painel', gobots: 'resposta do Gobots', frequentes: 'perguntas frequentes' };
   for (const c of lista) {
     h += `<div class="cartao mem-item ${c.ativa ? '' : 'inativa'}">
       <div class="linha entre"><span class="suave">${esc(c.itemId || '')} · ${dataBr(c.criadaEm)} · <span class="etiqueta cinza">${esc(origens[c.origem] || c.origem)}</span></span>

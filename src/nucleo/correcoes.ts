@@ -13,10 +13,11 @@ import { palavras, semelhanca } from './texto';
  * Três jeitos de uma correção nascer:
  * - "ensinar": botão "Ensinar ao bot" na pergunta pendente (funciona com o envio desligado);
  * - "envio": a resposta enviada pelo painel ficou bem diferente da sugestão;
- * - "gobots": na aba Respondidas, a resposta do Gobots era melhor e alguém a marcou como certa.
+ * - "gobots": na aba Respondidas, a resposta do Gobots era melhor e alguém a marcou como certa;
+ * - "frequentes": na aba Frequentes, alguém escreveu a resposta certa para um grupo de perguntas.
  */
 
-export type OrigemCorrecao = 'ensinar' | 'envio' | 'gobots';
+export type OrigemCorrecao = 'ensinar' | 'envio' | 'gobots' | 'frequentes';
 
 export interface Correcao {
   id: number;
@@ -185,4 +186,32 @@ export function memoriaParaIa(p: Pergunta): { texto: string; ids: number[] } {
     );
   }
   return { texto: partes.join('\n\n'), ids: exemplos.map((e) => e.correcao.id) };
+}
+
+/**
+ * Correção sem pergunta pendente por trás (aba Frequentes: vale para o grupo inteiro). Se já existe
+ * uma avulsa com a mesma pergunta, atualiza.
+ */
+export function salvarCorrecaoAvulsa(dados: {
+  pergunta: string; resposta: string; licao?: string | null; assunto?: string | null; itemId?: string | null;
+}): Correcao {
+  const pergunta = (dados.pergunta || '').trim().slice(0, 2000);
+  const resposta = (dados.resposta || '').trim().slice(0, 2000);
+  if (!pergunta) throw new Error('Falta a pergunta.');
+  if (!resposta) throw new Error('Escreva a resposta certa antes de ensinar.');
+  const licao = dados.licao?.trim() ? dados.licao.trim().slice(0, 500) : null;
+  const db = banco();
+  const existente = db.prepare('SELECT id, licao FROM correcoes WHERE pergunta_id IS NULL AND pergunta = ?').get(pergunta) as any;
+  if (existente) {
+    db.prepare('UPDATE correcoes SET resposta = ?, licao = ?, ativa = 1, criada_em = ? WHERE id = ?')
+      .run(resposta, licao ?? existente.licao ?? null, agora(), existente.id);
+    return daLinha(db.prepare('SELECT * FROM correcoes WHERE id = ?').get(existente.id));
+  }
+  const r = db
+    .prepare(
+      `INSERT INTO correcoes (plataforma, item_id, assunto, pergunta, sugestao, resposta, licao, origem, pergunta_id, criada_em)
+       VALUES ('mercadolivre', ?, ?, ?, NULL, ?, ?, 'frequentes', NULL, ?)`,
+    )
+    .run(dados.itemId ?? null, dados.assunto ?? null, pergunta, resposta, licao, agora());
+  return daLinha(db.prepare('SELECT * FROM correcoes WHERE id = ?').get(Number(r.lastInsertRowid)));
 }
