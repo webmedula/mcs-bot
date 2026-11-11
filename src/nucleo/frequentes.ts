@@ -21,6 +21,11 @@ export interface GrupoDePerguntas {
   vezesDaResposta: number;
   /** Quantas respostas do grupo eram mensagem automática (fora do horário etc.) e foram ignoradas. */
   automaticasIgnoradas: number;
+  /** Anúncio onde o grupo mais aparece (para resposta pronta de um anúncio só). */
+  itemId: string | null;
+  itemTitulo: string | null;
+  /** Em quantos anúncios diferentes as perguntas do grupo apareceram. */
+  anuncios: number;
   /** Já existe correção na Memória para a pergunta-exemplo. */
   jaEnsinada?: boolean;
 }
@@ -37,6 +42,8 @@ export interface PerguntaParaAgrupar {
   texto: string;
   resposta: string | null;
   assunto: string | null;
+  itemId?: string | null;
+  itemTitulo?: string | null;
 }
 
 const LIMIAR = 0.5;
@@ -125,6 +132,10 @@ export function agruparPerguntas(lista: PerguntaParaAgrupar[], gruposPorAssunto 
           respostaMaisUsada: respostas[0]?.item.resposta ?? null,
           vezesDaResposta: respostas[0]?.vezes ?? 0,
           automaticasIgnoradas: comResposta.length - reais.length,
+          ...(() => {
+            const itens = maisFrequentes(g.membros.filter((m) => m.itemId), (m) => m.itemId!);
+            return { itemId: itens[0]?.item.itemId ?? null, itemTitulo: itens[0]?.item.itemTitulo ?? null, anuncios: itens.length };
+          })(),
         };
       });
 
@@ -144,8 +155,9 @@ export function agruparPerguntas(lista: PerguntaParaAgrupar[], gruposPorAssunto 
 export function perguntasFrequentes(limite = 5000): { total: number; assuntos: AssuntoFrequente[] } {
   const linhas = banco()
     .prepare(
-      `SELECT texto, resposta, assunto FROM perguntas WHERE status = 'respondida'
-       ORDER BY criada_em DESC LIMIT ?`,
+      `SELECT p.texto, p.resposta, p.assunto, p.item_id AS itemId, pr.titulo AS itemTitulo
+       FROM perguntas p LEFT JOIN produtos pr ON pr.plataforma = p.plataforma AND pr.item_id = p.item_id
+       WHERE p.status = 'respondida' ORDER BY p.criada_em DESC LIMIT ?`,
     )
     .all(limite) as any[];
   const assuntos = agruparPerguntas(linhas);

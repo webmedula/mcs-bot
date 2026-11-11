@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.8.1 (2026-11-11)
+
+- "Virar resposta pronta" de compatibilidade, medidas, lado/kit ou instalação já vem com **Vale para** preenchido com o anúncio (o MLB onde a pergunta mais aparece), e o formulário mostra o nome do anúncio. Salvar um desses assuntos como "geral" pede confirmação.
+- Frequentes mostram em qual anúncio (ou em quantos) o grupo de perguntas aparece.
+- "Vale para" aceita o código como aparece no endereço do anúncio (`MLB-123...`) e guarda `MLB123...`.
+- O texto que vira resposta pronta perde "Boa tarde/Boa noite" do começo e a assinatura do fim (o sistema coloca sozinho).
+
 ## 0.8.0 (2026-11-11)
 
 - **Frequentes: resposta editável.** Cada grupo de perguntas parecidas mostra a melhor resposta num campo editável, com o "Por quê?" opcional, e dois botões: **Ensinar ao bot** (vai para a Memória e a IA usa como exemplo em perguntas parecidas) e **Virar resposta pronta** (agora leva o texto editado). Grupo já ensinado aparece marcado.

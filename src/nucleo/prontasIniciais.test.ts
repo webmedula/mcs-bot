@@ -56,4 +56,12 @@ describe('regras da loja', () => {
     expect(lerRegrasDaLoja()).toBe('Envio: até 14h sai no mesmo dia.');
     expect(() => gravarRegrasDaLoja('x'.repeat(6001))).toThrow(/6000/);
   });
+
+  it('vale para um anúncio aceita o código como aparece no endereço (MLB-123)', async () => {
+    const { criarRespostaPronta } = await import('./respostasProntas');
+    const r = criarRespostaPronta({ titulo: 'Spin', gatilhos: ['serve spin'], texto: 'Não serve na Spin.', escopo: 'mlb-123' });
+    expect(r.escopo).toBe('MLB123');
+    expect(encontrarRespostaPronta('Serve na Spin 2017?', 'MLB123')?.pronta.titulo).toBe('Spin');
+    expect(encontrarRespostaPronta('Serve na Spin 2017?', 'MLB999')).toBeNull();
+  });
 });
