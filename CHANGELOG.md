@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.8.0 (2026-11-11)
+
+- **Frequentes: resposta editável.** Cada grupo de perguntas parecidas mostra a melhor resposta num campo editável, com o "Por quê?" opcional, e dois botões: **Ensinar ao bot** (vai para a Memória e a IA usa como exemplo em perguntas parecidas) e **Virar resposta pronta** (agora leva o texto editado). Grupo já ensinado aparece marcado.
+- Mensagens automáticas ("Agradecemos sua mensagem. Não estamos disponíveis no momento.", "fora do horário"...) deixam de contar como "resposta mais usada"; o grupo avisa quando todas as respostas eram automáticas.
+- Rota `POST /api/correcoes` (correção sem pergunta pendente por trás, origem "frequentes").
+
 ## 0.7.0 (2026-11-11)
 
 - **Respondidas: escolha qual resposta é melhor** em cada pergunta: "A do Gobots (ensinar ao bot)", "Iguais" ou "A do bot". Escolher a do Gobots guarda a resposta na Memória (com o "Por quê?" opcional); trocar depois para "Iguais" ou "A do bot" desativa essa correção. Filtros "Para avaliar", "Gobots melhor" e "Todas", e placar no topo.

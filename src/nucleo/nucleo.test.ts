@@ -138,6 +138,16 @@ describe('perguntas frequentes', () => {
     expect(r[0].grupos[0].respostaMaisUsada).toBe('Sim, emitimos.');
     expect(r[0].grupos[0].gatilhoSugerido).toMatch(/nota|fiscal|emite/);
   });
+
+  it('ignora mensagem automática do tipo "não estamos disponíveis"', () => {
+    const lista = [
+      { texto: 'Oi vocês aumentou o preço?', resposta: 'Agradecemos sua mensagem. Não estamos disponíveis no momento.', assunto: 'preco' },
+      { texto: 'Vocês aumentou o preço?', resposta: 'Agradecemos sua mensagem. Não estamos disponíveis no momento.', assunto: 'preco' },
+    ];
+    const g = agruparPerguntas(lista)[0].grupos[0];
+    expect(g.respostaMaisUsada).toBeNull();
+    expect(g.automaticasIgnoradas).toBe(2);
+  });
 });
 
 describe('preço na ficha que vai para a IA', () => {
