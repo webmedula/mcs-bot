@@ -64,7 +64,9 @@ function validar(d: DadosRespostaPronta): DadosRespostaPronta {
   if (!texto) throw new Error('Escreva o texto da resposta.');
   if (gatilhos.length === 0) throw new Error('Informe pelo menos um gatilho (palavras que a pergunta precisa ter).');
   if (texto.length > 2000) throw new Error('O Mercado Livre aceita no máximo 2000 caracteres por resposta.');
-  const escopo = String(d.escopo || 'geral').trim().toUpperCase() === 'GERAL' ? 'geral' : String(d.escopo).trim().toUpperCase();
+  // Aceita "MLB-123" (como aparece no endereço do anúncio) e guarda "MLB123", que é o id da API.
+  const bruto = String(d.escopo || 'geral').trim().toUpperCase();
+  const escopo = bruto === 'GERAL' ? 'geral' : bruto.replace(/^(MLB)[-\s]*/, '$1');
   return { titulo, texto, gatilhos, escopo, assunto: d.assunto || null, ativa: d.ativa !== false };
 }
 

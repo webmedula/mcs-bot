@@ -439,7 +439,7 @@ async function telaPendentes() {
         ${envio ? '' : `<button class="acao" onclick="copiar(${p.id})">Copiar resposta</button>`}
         <button class="acao" onclick="refazer(${p.id}, this)">Refazer sugestão</button>
         <button class="acao" onclick="abrirEnsinar(${p.id})">Ensinar ao bot</button>
-        <button class="acao" onclick="novaProntaDe(${esc(JSON.stringify({ texto: p.texto, resposta: p.sugestao || "", assunto: p.assunto, itemId: p.itemId }))})">Virar resposta pronta</button>
+        <button class="acao" onclick="novaProntaDe(${esc(JSON.stringify({ texto: p.texto, resposta: p.sugestao || "", assunto: p.assunto, itemId: p.itemId, itemTitulo: p.itemTitulo }))})">Virar resposta pronta</button>
       </div>
       ${blocoEnsinar(p.id, 'Corrija o texto da resposta acima e guarde. O bot passa a usar essa correção como exemplo em perguntas parecidas.')}
       </div>`;
@@ -487,7 +487,7 @@ async function ensinarGrupo(k, btn) {
 }
 function prontaDoGrupo(k) {
   const g = grupoFreq[k];
-  novaProntaDe({ texto: g.pergunta, resposta: $(`#fq-${k}`).value, assunto: g.assunto, gatilho: g.gatilho });
+  novaProntaDe({ texto: g.pergunta, resposta: $(`#fq-${k}`).value, assunto: g.assunto, gatilho: g.gatilho, itemId: g.itemId, itemTitulo: g.itemTitulo });
 }
 async function telaFrequentes() {
   const hist = estado.historico;
@@ -509,12 +509,13 @@ async function telaFrequentes() {
       <details ${f.assuntos.indexOf(a) < 2 ? 'open' : ''}><summary>Ver os ${a.grupos.length} grupos mais comuns</summary>`;
     a.grupos.forEach((g, i) => {
       const k = `${a.assunto}-${i}`;
-      grupoFreq[k] = { pergunta: g.exemplos[0], assunto: a.assunto, gatilho: g.gatilhoSugerido };
+      grupoFreq[k] = { pergunta: g.exemplos[0], assunto: a.assunto, gatilho: g.gatilhoSugerido, itemId: g.itemId, itemTitulo: g.itemTitulo };
       const aviso = !g.respostaMaisUsada && g.automaticasIgnoradas
         ? `<div class="suave" style="color:var(--amarelo)">As respostas desse grupo eram mensagens automáticas (ex.: "não estamos disponíveis") e foram ignoradas. Escreva a resposta certa.</div>` : '';
       h += `<div style="border-top:1px solid var(--borda);padding-top:10px;margin-top:10px">
         <div class="linha entre"><b>${g.quantidade}× parecidas ${g.jaEnsinada ? '<span class="etiqueta verde">já está na memória</span>' : ''}</b><span class="suave">gatilho sugerido: <code>${esc(g.gatilhoSugerido)}</code></span></div>
         <ul style="margin:6px 0">${g.exemplos.map((e) => `<li>${esc(e)}</li>`).join('')}</ul>
+        ${g.itemId ? `<div class="suave">${g.anuncios > 1 ? `Em ${g.anuncios} anúncios; mais em:` : 'Anúncio:'} ${esc(g.itemTitulo || g.itemId)} (${esc(g.itemId)})</div>` : ''}
         ${aviso}
         <label for="fq-${k}">${g.respostaMaisUsada ? `Melhor resposta (veio da mais usada, ${g.vezesDaResposta}×; edite se precisar)` : 'Melhor resposta'}</label>
         <textarea id="fq-${k}" maxlength="2000" placeholder="Escreva como a loja deve responder esse tipo de pergunta">${esc(g.respostaMaisUsada || '')}</textarea>
@@ -537,13 +538,18 @@ async function importar() {
 // ---------------- Respostas prontas ----------------
 let rascunho = null;
 
+/** Assuntos que dependem do produto: a resposta pronta deve valer só para um anúncio. */
+const ASSUNTOS_DO_PRODUTO = ['compatibilidade', 'medidas', 'kit_lado', 'instalacao'];
 function novaProntaDe(d) {
+  const doProduto = ASSUNTOS_DO_PRODUTO.includes(d.assunto) && d.itemId;
   rascunho = {
     titulo: (d.texto || '').slice(0, 60),
     assunto: d.assunto || '',
     gatilhos: d.gatilho ? [d.gatilho] : [],
-    texto: (d.resposta || '').replace(/^(ol[aá]!?\s*)/i, ''),
-    escopo: 'geral',
+    // Saudação e assinatura entram sozinhas (e "Boa noite" de manhã fica estranho).
+    texto: (d.resposta || '').replace(/^(ol[aá]|oi|bom dia|boa tarde|boa noite)[!,.]*\s*/i, '').replace(/\s*atenciosamente,?\s*equipe mcs\.?\s*$/i, ''),
+    escopo: doProduto ? d.itemId : 'geral',
+    itemTitulo: doProduto ? d.itemTitulo : null,
   };
   mostrar('prontas');
 }
@@ -558,7 +564,8 @@ function formPronta(r) {
     <label>Nome (só para você achar depois)</label><input name="titulo" value="${esc(r.titulo)}" required>
     <div class="grade2">
       <div><label>Assunto</label><select name="assunto">${opcoesAssunto(r.assunto)}</select></div>
-      <div><label>Vale para</label><input name="escopo" value="${esc(r.escopo === 'geral' ? 'geral' : r.escopo)}" placeholder="geral, ou o código do anúncio (MLB...)"></div>
+      <div><label>Vale para</label><input name="escopo" value="${esc(r.escopo === 'geral' ? 'geral' : r.escopo)}" placeholder="geral, ou o código do anúncio (MLB...)">
+        <div class="suave" style="margin-top:4px">${r.itemTitulo ? `Só no anúncio: ${esc(r.itemTitulo)}. ` : ''}"geral" vale para todos os anúncios. Compatibilidade, medidas e lado/kit devem valer para um anúncio só (código MLB, está no endereço do anúncio).</div></div>
     </div>
     <label>Gatilhos: um por linha. A resposta é usada quando a pergunta tem TODAS as palavras de um gatilho, em qualquer ordem.</label>
     <textarea name="gatilhos" style="min-height:70px" placeholder="nota fiscal&#10;emite nf">${esc((r.gatilhos || []).join('\n'))}</textarea>
@@ -621,6 +628,8 @@ async function salvarPronta(ev, id) {
     titulo: f.titulo.value, assunto: f.assunto.value || null, escopo: f.escopo.value || 'geral',
     gatilhos: f.gatilhos.value.split('\n').map((s) => s.trim()).filter(Boolean), texto: f.texto.value, ativa: f.ativa.checked,
   };
+  if (ASSUNTOS_DO_PRODUTO.includes(corpo.assunto) && corpo.escopo.trim().toLowerCase() === 'geral'
+    && !confirm('Esta resposta é de um assunto que depende do produto (compatibilidade, medidas, lado/kit) e vai valer para TODOS os anúncios. Salvar mesmo assim? (O mais seguro é pôr o código MLB do anúncio em "Vale para".)')) return;
   try {
     const r = await api(id ? `/api/respostas-prontas/${id}` : '/api/respostas-prontas', { metodo: id ? 'PUT' : 'POST', corpo });
     toast(r.pendentesAtualizadas ? `Resposta pronta salva e usada em ${r.pendentesAtualizadas} pergunta(s) pendente(s).` : 'Resposta pronta salva.');
