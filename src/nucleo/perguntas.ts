@@ -127,7 +127,8 @@ export function listarPerguntas(f: FiltroPerguntas = {}): Pergunta[] {
     const b = `%${f.busca}%`;
     args.push(b, b, b, b);
   }
-  if (f.comSugestao) where.push("p.sugestao IS NOT NULL AND p.sugestao <> ''");
+  // "Passou pelo bot": inclui as que a IA devolveu para uma pessoa (sem texto), que são as que mais ensinam.
+  if (f.comSugestao) where.push('p.sugestao_origem IS NOT NULL');
   const ordem = f.status === 'pendente' ? 'p.criada_em ASC' : 'p.criada_em DESC';
   const limite = Math.min(Math.max(f.limite ?? 100, 1), 1000);
   const sql = `${SELECT} ${where.length ? `WHERE ${where.join(' AND ')}` : ''} ORDER BY ${ordem} LIMIT ${limite}`;

@@ -82,6 +82,25 @@ function migrar(banco: DatabaseSync): void {
       atualizada_em  TEXT NOT NULL
     );
 
+    -- Correções da equipe: a resposta certa para uma pergunta (e, se quiser, a lição por trás dela).
+    -- A IA recebe as parecidas como exemplo antes de responder.
+    CREATE TABLE IF NOT EXISTS correcoes (
+      id             INTEGER PRIMARY KEY AUTOINCREMENT,
+      plataforma     TEXT NOT NULL,
+      item_id        TEXT,
+      assunto        TEXT,
+      pergunta       TEXT NOT NULL,
+      sugestao       TEXT,
+      resposta       TEXT NOT NULL,
+      licao          TEXT,
+      -- ensinar (botão no painel) | envio (resposta enviada pelo painel diferente da sugestão) | gobots (aba Respondidas)
+      origem         TEXT NOT NULL,
+      pergunta_id    INTEGER,
+      ativa          INTEGER NOT NULL DEFAULT 1,
+      usos           INTEGER NOT NULL DEFAULT 0,
+      criada_em      TEXT NOT NULL
+    );
+
     -- Chave/valor: login do ML, progresso da importação, últimos erros.
     CREATE TABLE IF NOT EXISTS estado (
       chave  TEXT PRIMARY KEY,

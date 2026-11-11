@@ -18,7 +18,8 @@ Antes de enviar, o sistema confere no ML se a pergunta ainda está sem resposta.
 `/` (senha em `PAINEL_SENHA`):
 
 - **Visão geral** (tela inicial): perguntas recebidas, respondidas e sem resposta, tempo de resposta, quem respondeu (Gobots, painel ou bot), quanto o bot acerta, perguntas por dia, assuntos e anúncios com mais perguntas, comparando com o período anterior (7, 30 ou 90 dias).
-- **Pendentes**: perguntas sem resposta, com a sugestão editável.
+- **Pendentes**: perguntas sem resposta, com a sugestão editável e o botão "Ensinar ao bot".
+- **Memória**: correções da equipe que a IA usa como exemplo em perguntas parecidas, e lições que valem sempre.
 - **Perguntas frequentes**: importa o histórico do ML e agrupa por assunto; cada grupo mostra a resposta mais usada e vira resposta pronta com um clique.
 - **Respostas prontas**: criar, editar, testar.
 - **Respondidas**: comparação com o que foi respondido por fora (Gobots).

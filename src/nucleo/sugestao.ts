@@ -3,6 +3,7 @@ import { config } from '../config';
 import { completar, iaConfigurada } from '../ia/provedor';
 import { logger } from '../logger';
 import { nomeDoAssunto } from './assuntos';
+import { contarUsoDasCorrecoes, correcaoDaPergunta, memoriaParaIa } from './correcoes';
 import { lerRegrasDaLoja } from './regrasDaLoja';
 import { gravarSugestao, lerPergunta, type Pergunta, type Sugestao } from './perguntas';
 import { contarUso, encontrarRespostaPronta, preencherModelo } from './respostasProntas';
@@ -12,7 +13,8 @@ import type { FichaDoProduto } from './tipos';
  * COMO A SUGESTÃO É MONTADA
  *
  * 1. Resposta pronta que casa com a pergunta (a do anúncio vence a geral).
- * 2. Senão, a IA, presa à ficha do anúncio e ao que já foi respondido nele.
+ * 2. Senão, a IA, presa à ficha do anúncio, às regras da loja, às correções da equipe (memória) e
+ *    ao que já foi respondido no anúncio.
  * 3. Se a IA não tiver base, ela devolve "precisa de humano" e não inventa nada.
  *
  * Nada aqui envia para o ML. Enviar é outra decisão (painel, Telegram ou automático), com trava.
@@ -74,9 +76,11 @@ export function fichaEmTexto(f: FichaDoProduto): string {
 const SISTEMA = `Você responde perguntas de compradores em anúncios de autopeças de uma loja no Mercado Livre.
 
 REGRAS (obrigatórias):
-- Use SOMENTE as informações da ficha do anúncio, das REGRAS DA LOJA e das respostas anteriores
-  fornecidas. Nunca invente medida, voltagem, compatibilidade, prazo, marca, garantia ou qualquer dado
-  que não esteja ali. Se as regras da loja e uma resposta anterior divergirem, valem as regras da loja.
+- Use SOMENTE as informações da ficha do anúncio, das REGRAS DA LOJA, das LIÇÕES e CORREÇÕES DA
+  EQUIPE e das respostas anteriores fornecidas. Nunca invente medida, voltagem, compatibilidade, prazo,
+  marca, garantia ou qualquer dado que não esteja ali.
+- Prioridade quando divergirem: regras da loja > lições e correções da equipe > respostas anteriores.
+  As correções mostram erros que já aconteceram: não repita a resposta marcada como ERRADA.
 - Voltagem, potência e medidas: só o que estiver nos atributos, no título ou na descrição do anúncio.
   Se não estiver, marque precisa_humano.
 - Compatibilidade com veículo: só confirme se o veículo (modelo E ano) estiver na tabela de
@@ -127,6 +131,7 @@ export async function sugerirComIa(p: Pergunta, ficha: FichaDoProduto | null): P
     return { texto: null, origem: 'nenhuma', prontaId: null, confianca: null, motivo: 'Nenhuma resposta pronta casou e a IA não está configurada.' };
   }
   const anteriores = respostasAnteriores(p);
+  const memoria = memoriaParaIa(p);
   const usuario = [
     `PERGUNTA DO COMPRADOR: ${p.texto}`,
     `Assunto detectado: ${nomeDoAssunto(p.assunto)}`,
@@ -134,6 +139,7 @@ export async function sugerirComIa(p: Pergunta, ficha: FichaDoProduto | null): P
     'REGRAS DA LOJA (valem para todos os anúncios):',
     lerRegrasDaLoja() || '(nenhuma regra cadastrada)',
     '',
+    ...(memoria.texto ? [memoria.texto, ''] : []),
     'FICHA DO ANÚNCIO:',
     ficha ? fichaEmTexto(ficha) : '(não foi possível ler o anúncio)',
     '',
@@ -144,17 +150,19 @@ export async function sugerirComIa(p: Pergunta, ficha: FichaDoProduto | null): P
   ].join('\n');
 
   const { texto, modelo } = await completar(SISTEMA, usuario);
+  contarUsoDasCorrecoes(memoria.ids);
   const j = lerJsonDaIa(texto);
   if (!j) return { texto: null, origem: 'nenhuma', prontaId: null, confianca: null, motivo: `A IA (${modelo}) respondeu fora do formato.` };
   if (j.precisaHumano || !j.resposta) {
     return { texto: null, origem: 'ia', prontaId: null, confianca: j.confianca, motivo: `Precisa de uma pessoa: ${j.motivo || 'sem base na ficha'}` };
   }
+  const motivo = j.motivo || 'Resposta da IA com base na ficha do anúncio.';
   return {
     texto: montarTexto(limparDadosDeContato(j.resposta)),
     origem: 'ia',
     prontaId: null,
     confianca: j.confianca,
-    motivo: j.motivo || 'Resposta da IA com base na ficha do anúncio.',
+    motivo: memoria.ids.length ? `${motivo} (usou ${memoria.ids.length} correção(ões) da equipe)` : motivo,
   };
 }
 
@@ -174,6 +182,13 @@ export function sugerirComPronta(p: Pergunta, ficha: FichaDoProduto | null): Sug
 export async function gerarSugestao(id: number, ficha: FichaDoProduto | null): Promise<Sugestao> {
   const p = lerPergunta(id);
   if (!p) throw new Error('Pergunta não encontrada.');
+  // A equipe já corrigiu esta pergunta: a correção vence (refazer não pode apagar o que foi ensinado).
+  const corrigida = correcaoDaPergunta(id);
+  if (corrigida) {
+    const s: Sugestao = { texto: corrigida.resposta, origem: 'ia', prontaId: null, confianca: 1, motivo: 'Corrigida pela equipe (o bot guardou para as próximas).' };
+    gravarSugestao(id, s);
+    return s;
+  }
   let s = sugerirComPronta(p, ficha);
   if (s) {
     contarUso(s.prontaId!);

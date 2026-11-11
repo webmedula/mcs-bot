@@ -121,6 +121,14 @@
   .ranking .nome { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
   @media (max-width: 860px) { .vg-grade { grid-template-columns: 1fr 1fr; } }
   @media (max-width: 520px) { .vg-grade { grid-template-columns: 1fr; } }
+  .ensinar { display: none; margin-top: 10px; padding: 12px; border-radius: 10px; background: var(--azul-claro); }
+  .ensinar.aberto { display: block; }
+  .ensinar p { margin: 0 0 8px; font-size: 13px; color: var(--azul); }
+  .mem-item { display: grid; gap: 6px; }
+  .mem-item.inativa { opacity: .6; }
+  .mem-par { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+  @media (max-width: 760px) { .mem-par { grid-template-columns: 1fr; } }
+  @media (max-width: 1360px) { .marca span { display: none; } }
   #toast { position: fixed; bottom: 18px; left: 50%; transform: translateX(-50%); background: var(--topo); color: #fff; padding: 10px 16px; border-radius: 10px; display: none; z-index: 10; max-width: 90vw; box-shadow: 0 8px 24px rgba(0,0,0,.2); }
 </style>
 <link rel="icon" type="image/png" href="/favicon.png">
@@ -146,6 +154,7 @@
       <button data-aba="frequentes" title="Perguntas frequentes">Frequentes</button>
       <button data-aba="prontas" title="Respostas prontas e regras da loja">Respostas prontas</button>
       <button data-aba="comparar">Respondidas</button>
+      <button data-aba="memoria" title="O que o bot aprendeu com as correções da equipe">Memória</button>
       <button data-aba="conexao">Conexão</button>
     </nav>
     <div id="topo-direita"><span class="status-ml" id="status-ml"></span><span id="rodape-versao"></span><button onclick="sair()" aria-label="Sair do painel">Sair</button></div>
@@ -242,7 +251,7 @@ async function iniciar() {
   const p = new URLSearchParams(location.search);
   if (p.get('conectado')) { toast('Mercado Livre conectado.'); history.replaceState(null, '', '/'); }
   const inicial = location.hash.slice(1);
-  mostrar(['visao', 'pendentes', 'frequentes', 'prontas', 'comparar', 'conexao'].includes(inicial) ? inicial : aba);
+  mostrar(['visao', 'pendentes', 'frequentes', 'prontas', 'comparar', 'memoria', 'conexao'].includes(inicial) ? inicial : aba);
   window.addEventListener('hashchange', () => { const h = location.hash.slice(1); if (h && h !== aba) mostrar(h); });
   setInterval(() => { if (aba === 'pendentes' && !document.querySelector('textarea:focus')) mostrar('pendentes', true); else carregarEstado(); }, 60_000);
 }
@@ -266,7 +275,7 @@ async function mostrar(nome, silencioso) {
   if (!silencioso) $('#conteudo').innerHTML = '<p class="vazio">Carregando…</p>';
   try {
     await carregarEstado();
-    const telas = { visao: telaVisao, pendentes: telaPendentes, frequentes: telaFrequentes, prontas: telaProntas, comparar: telaComparar, conexao: telaConexao };
+    const telas = { visao: telaVisao, pendentes: telaPendentes, frequentes: telaFrequentes, prontas: telaProntas, comparar: telaComparar, memoria: telaMemoria, conexao: telaConexao };
     $('#conteudo').innerHTML = await telas[nome]();
   } catch (e) { $('#conteudo').innerHTML = `<div class="aviso vermelho">${esc(e.message)}</div>`; }
 }
@@ -424,8 +433,11 @@ async function telaPendentes() {
         <button class="acao principal" onclick="enviar(${p.id}, this)" ${envio ? '' : 'disabled title="Envio desligado (ML_ENVIO_HABILITADO)"'}>Enviar ao Mercado Livre</button>
         ${envio ? '' : `<button class="acao" onclick="copiar(${p.id})">Copiar resposta</button>`}
         <button class="acao" onclick="refazer(${p.id}, this)">Refazer sugestão</button>
+        <button class="acao" onclick="abrirEnsinar(${p.id})">Ensinar ao bot</button>
         <button class="acao" onclick="novaProntaDe(${esc(JSON.stringify({ texto: p.texto, resposta: p.sugestao || "", assunto: p.assunto, itemId: p.itemId }))})">Virar resposta pronta</button>
-      </div></div>`;
+      </div>
+      ${blocoEnsinar(p.id, 'Corrija o texto da resposta acima e guarde. O bot passa a usar essa correção como exemplo em perguntas parecidas.')}
+      </div>`;
   }
   return h;
 }
@@ -606,10 +618,72 @@ async function telaComparar() {
       <div class="grade2">
         <div><div class="suave">Respondido ${esc(quem)} ${p.respondidaEm ? `(${tempoEntre(p.criadaEm, p.respondidaEm)})` : ''}</div><div class="caixa">${esc(p.resposta || '')}</div></div>
         <div><div class="suave">Nossa sugestão ${etiquetaOrigem(p)}</div><div class="caixa">${esc(p.sugestao || p.sugestaoMotivo || '')}</div></div>
-      </div></div>`;
+      </div>
+      <div class="linha" style="margin-top:8px"><button class="acao" onclick="abrirEnsinar(${p.id})">A resposta da esquerda é a certa: ensinar ao bot</button></div>
+      ${blocoEnsinar(p.id, 'O bot guarda a resposta da esquerda como a certa para perguntas parecidas.')}
+      </div>`;
   }
   return h;
 }
+// ---------------- Ensinar / Memória ----------------
+function blocoEnsinar(id, explica) {
+  return `<div class="ensinar" id="ens-${id}"><p>${esc(explica)}</p>
+    <label for="lic-${id}" style="margin-top:0">Por quê? (opcional: vira uma regra que o bot segue em todas as perguntas)</label>
+    <input id="lic-${id}" maxlength="500" placeholder="Ex.: não confirmamos compatibilidade só pelo modelo, precisa do ano">
+    <div class="linha" style="margin-top:8px"><button class="acao principal" onclick="ensinar(${id}, this)">Guardar na memória</button>
+    <button class="acao" onclick="abrirEnsinar(${id})">Cancelar</button></div></div>`;
+}
+function abrirEnsinar(id) { const e = $(`#ens-${id}`); e.classList.toggle('aberto'); if (e.classList.contains('aberto')) $(`#lic-${id}`).focus(); }
+async function ensinar(id, btn) {
+  const t = $(`#t-${id}`);
+  const corpo = { licao: $(`#lic-${id}`).value };
+  if (t) { corpo.texto = t.value.trim(); if (!corpo.texto) return toast('Escreva a resposta certa antes de guardar.'); }
+  await ocupado(btn, 'Guardando…', async () => {
+    try { await api(`/api/perguntas/${id}/ensinar`, { metodo: 'POST', corpo }); toast('Guardado. O bot vai usar isso nas próximas perguntas parecidas.'); await mostrar(aba, true); }
+    catch (e) { toast(e.message); }
+  });
+}
+async function telaMemoria() {
+  const lista = await api('/api/correcoes');
+  const ativas = lista.filter((c) => c.ativa).length;
+  const licoes = lista.filter((c) => c.ativa && c.licao).length;
+  let h = `<div class="cartao"><b>O que o bot aprendeu</b>
+    <p class="explica" style="margin:4px 0 0">Cada vez que alguém corrige uma sugestão, a resposta certa fica guardada aqui. Antes de responder, a IA lê as correções de perguntas parecidas e todas as lições. Correção de outro anúncio ensina a política e o jeito de responder, não os dados do produto.</p>
+    <p class="suave" style="margin:8px 0 0">Entra na memória quando você: clica em <b>Ensinar ao bot</b> numa pendente; envia pelo painel uma resposta bem diferente da sugestão; ou marca na aba <b>Respondidas</b> que a resposta do Gobots era a certa.</p>
+    <p style="margin:8px 0 0"><b>${ativas}</b> correção(ões) ativa(s), <b>${licoes}</b> com lição.</p></div>`;
+  if (!lista.length) return h + '<div class="vazio"><b>Memória vazia</b>Corrija uma sugestão em Pendentes ou em Respondidas e clique em "Ensinar ao bot".</div>';
+  const origens = { ensinar: 'ensinada no painel', envio: 'enviada pelo painel', gobots: 'resposta do Gobots' };
+  for (const c of lista) {
+    h += `<div class="cartao mem-item ${c.ativa ? '' : 'inativa'}">
+      <div class="linha entre"><span class="suave">${esc(c.itemId || '')} · ${dataBr(c.criadaEm)} · <span class="etiqueta cinza">${esc(origens[c.origem] || c.origem)}</span></span>
+        <span class="suave">usada ${c.usos}x${c.ativa ? '' : ' · <b>desativada</b>'}</span></div>
+      <div class="pergunta" style="margin:0">${esc(c.pergunta)}</div>
+      <div class="mem-par">
+        ${c.sugestao ? `<div><div class="suave">O bot tinha sugerido</div><div class="caixa">${esc(c.sugestao)}</div></div>` : ''}
+        <div><div class="suave">Resposta certa</div><div class="caixa" style="background:var(--verde-claro)">${esc(c.resposta)}</div></div>
+      </div>
+      <label for="mlic-${c.id}">Lição (regra que vale para todas as perguntas)</label>
+      <div class="linha"><input id="mlic-${c.id}" style="flex:1;width:auto" maxlength="500" value="${esc(c.licao || '')}" placeholder="opcional">
+        <button class="acao" onclick="salvarLicao(${c.id}, this)">Salvar lição</button></div>
+      <div class="linha"><button class="acao" onclick="alternarCorrecao(${c.id}, ${!c.ativa})">${c.ativa ? 'Desativar' : 'Reativar'}</button>
+        <button class="acao" onclick="apagarCorrecao(${c.id})">Apagar</button></div>
+    </div>`;
+  }
+  return h;
+}
+async function salvarLicao(id, btn) {
+  await ocupado(btn, 'Salvando…', async () => {
+    try { await api(`/api/correcoes/${id}`, { metodo: 'PUT', corpo: { licao: $(`#mlic-${id}`).value } }); toast('Lição salva.'); } catch (e) { toast(e.message); }
+  });
+}
+async function alternarCorrecao(id, ativa) {
+  try { await api(`/api/correcoes/${id}`, { metodo: 'PUT', corpo: { ativa } }); mostrar('memoria', true); } catch (e) { toast(e.message); }
+}
+async function apagarCorrecao(id) {
+  if (!confirm('Apagar esta correção? O bot deixa de usá-la.')) return;
+  try { await api(`/api/correcoes/${id}`, { metodo: 'DELETE' }); mostrar('memoria', true); } catch (e) { toast(e.message); }
+}
+
 function tempoEntre(a, b) {
   const min = Math.round((Date.parse(b) - Date.parse(a)) / 60000);
   return min < 60 ? `em ${min} min` : `em ${Math.round(min / 60)} h`;
