@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.5.0 (2026-11-11)
+
+- **Visão geral**, nova tela inicial no estilo da home do Gobots: perguntas recebidas, respondidas e sem resposta (com "Atender agora"), tempo de resposta (mediana) e % respondidas em até 1 hora, quem respondeu (Gobots/fora, painel, bot sozinho), % das perguntas com sugestão do bot (resposta pronta × IA × precisou de pessoa), % de sugestões parecidas com o que o Gobots respondeu, gráfico de perguntas por dia, assuntos e anúncios com mais perguntas. Período de 7, 30 ou 90 dias, com seta de variação em relação ao período anterior. Rota `GET /api/visao-geral?dias=30`.
+- Datas do ML com fuso (-04:00) contadas corretamente (comparação por data, não por texto).
+
 ## 0.4.0 (2026-11-10)
 
 - **Regras da loja** editáveis no painel (aba Respostas prontas): horário de envio, retirada, troca, nota fiscal etc. A IA lê esse texto antes de responder; mudar o texto muda as respostas na hora. Vem preenchido com as regras da planilha do Gobots, já adaptadas ao ML.
