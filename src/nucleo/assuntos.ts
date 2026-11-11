@@ -9,6 +9,14 @@ import { normalizar } from './texto';
  * "pronta entrega" é sobre ter o produto, não sobre o envio.
  */
 export const ASSUNTOS: Array<{ id: string; nome: string; termos: string[] }> = [
+  // Primeiro: "pedido feito e pago via pix" não é pergunta de preço.
+  {
+    id: 'pos_compra',
+    nome: 'Aviso de compra ou pagamento',
+    termos: ['pedido feito', 'ja paguei', 'paguei', 'pago via pix', 'pago no pix', 'pagamento feito', 'pagamento efetuado',
+      'efetuei o pagamento', 'acabei de comprar', 'acabei de fazer a compra', 'acabei de fazer o pedido', 'fiz o pedido',
+      'fiz a compra', 'ja comprei', 'comprei agora'],
+  },
   {
     id: 'compatibilidade',
     nome: 'Compatibilidade (serve no carro?)',

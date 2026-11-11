@@ -350,8 +350,13 @@ async function telaVisao() {
     <div class="vg-card"><div class="rotulo">Perguntas com sugestão do bot</div><div class="valor">${pctTxt(bot.cobertura)} <small>${num(bot.pronta + bot.ia)} de ${num(bot.analisadas)}</small></div>
       ${bot.analisadas ? `<div class="pilha"><span style="width:${(bot.pronta / bot.analisadas) * 100}%;background:var(--verde)"></span><span style="width:${(bot.ia / bot.analisadas) * 100}%;background:var(--azul)"></span></div>
       <div class="legenda"><span><i style="background:var(--verde)"></i>Resposta pronta ${num(bot.pronta)}</span><span><i style="background:var(--azul)"></i>IA ${num(bot.ia)}</span><span><i style="background:#eef0f3;border:1px solid var(--borda)"></i>Precisou de pessoa ${num(bot.semSugestao)}</span></div>` : '<span class="var neutro">aparece conforme chegam perguntas novas</span>'}</div>
-    <div class="vg-card"><div class="rotulo">Sugestão parecida com o que o Gobots respondeu</div><div class="valor">${pctTxt(cmp.percentual)} <small>${num(cmp.parecidas)} de ${num(cmp.comparadas)}</small></div>
-      <a href="#comparar" onclick="event.preventDefault(); history.pushState(null, '', '#comparar'); mostrar('comparar')" class="suave">ver lado a lado</a></div>
+    ${(() => { const av = a.avaliacoes, n = av.bot + av.iguais + av.gobots;
+      return n ? `<div class="vg-card"><div class="rotulo">Bot empata ou ganha do Gobots</div><div class="valor">${pctTxt(av.nossaMelhorOuIgual)} <small>de ${num(n)} avaliadas</small></div>
+        <span class="suave">${num(av.bot)} bot melhor · ${num(av.iguais)} iguais · ${num(av.gobots)} Gobots melhor</span>
+        <a href="#comparar" onclick="event.preventDefault(); history.pushState(null, '', '#comparar'); mostrar('comparar')" class="suave">avaliar mais</a></div>`
+      : `<div class="vg-card"><div class="rotulo">Sugestão parecida com o que o Gobots respondeu</div><div class="valor">${pctTxt(cmp.percentual)} <small>${num(cmp.parecidas)} de ${num(cmp.comparadas)}</small></div>
+        <span class="suave">estimativa por palavras; avalie na aba Respondidas para ter o placar real</span>
+        <a href="#comparar" onclick="event.preventDefault(); history.pushState(null, '', '#comparar'); mostrar('comparar')" class="suave">avaliar</a></div>`; })()}
     <div class="vg-card"><div class="rotulo">Respostas prontas ativas</div><div class="valor">${num(estado.respostasProntas)}</div>
       <a href="#prontas" onclick="event.preventDefault(); history.pushState(null, '', '#prontas'); mostrar('prontas')" class="suave">gerenciar</a></div>
   </div>`;
@@ -606,24 +611,56 @@ async function testar() {
 }
 
 // ---------------- Respondidas / comparação ----------------
+let filtroAvaliacao = 'pendentes';
+function filtrarAvaliacao(f) { filtroAvaliacao = f; mostrar('comparar', true); }
 async function telaComparar() {
-  const lista = await api('/api/perguntas?status=respondida&comSugestao=1&limite=100');
-  let h = `<div class="cartao"><b>O que foi respondido × o que o sistema sugeriu</b>
-    <p class="explica" style="margin:4px 0 0">Enquanto o Gobots continua ligado, cada pergunta que ele (ou alguém) responde aparece aqui ao lado da nossa sugestão. É assim que decidimos quando dá para desligar o Gobots e ligar o envio.</p></div>`;
-  if (!lista.length) return h + '<div class="vazio"><b>Nada para comparar ainda</b>Aqui aparecem as perguntas que o Gobots (ou alguém) respondeu e para as quais o bot também deu sugestão.</div>';
+  const todas = await api('/api/perguntas?status=respondida&comSugestao=1&limite=200');
+  const cont = { bot: 0, iguais: 0, gobots: 0 };
+  for (const p of todas) if (cont[p.avaliacao] !== undefined) cont[p.avaliacao]++;
+  const semAval = todas.filter((p) => !p.avaliacao).length;
+  const avaliadas = cont.bot + cont.iguais + cont.gobots;
+  let h = `<div class="cartao"><b>Qual resposta é melhor?</b>
+    <p class="explica" style="margin:4px 0 0">Cada pergunta que o Gobots (ou alguém) respondeu aparece ao lado da sugestão do bot. Escolha a melhor: quando a do Gobots ganha, o bot aprende com ela (vai para a Memória). O placar mostra quando dá para desligar o Gobots.</p>
+    ${avaliadas ? `<p style="margin:8px 0 0">Placar: <b>${cont.bot}</b> nossa melhor · <b>${cont.iguais}</b> iguais · <b>${cont.gobots}</b> Gobots melhor
+      <span class="suave">(bot empata ou ganha em ${Math.round(((cont.bot + cont.iguais) / avaliadas) * 100)}% das avaliadas)</span></p>` : ''}</div>`;
+  if (!todas.length) return h + '<div class="vazio"><b>Nada para comparar ainda</b>Aqui aparecem as perguntas que o Gobots (ou alguém) respondeu e que passaram pelo bot.</div>';
+  h += `<div class="filtros">
+    <button class="${filtroAvaliacao === 'pendentes' ? 'ativo' : ''}" onclick="filtrarAvaliacao('pendentes')">Para avaliar (${semAval})</button>
+    <button class="${filtroAvaliacao === 'gobots' ? 'ativo' : ''}" onclick="filtrarAvaliacao('gobots')">Gobots melhor (${cont.gobots})</button>
+    <button class="${filtroAvaliacao === 'todas' ? 'ativo' : ''}" onclick="filtrarAvaliacao('todas')">Todas (${todas.length})</button></div>`;
+  const lista = filtroAvaliacao === 'pendentes' ? todas.filter((p) => !p.avaliacao) : filtroAvaliacao === 'gobots' ? todas.filter((p) => p.avaliacao === 'gobots') : todas;
+  if (!lista.length) return h + `<div class="vazio"><b>${filtroAvaliacao === 'pendentes' ? 'Tudo avaliado' : 'Nenhuma aqui'}</b>${filtroAvaliacao === 'pendentes' ? 'Novas aparecem conforme o Gobots responde.' : ''}</div>`;
   for (const p of lista) {
     const quem = { externo: 'Gobots / fora do sistema', painel: 'pelo painel', 'mcs-bot': 'automático' }[p.respondidaPor] || p.respondidaPor;
-    h += `<div class="cartao"><div class="linha entre"><span class="suave">${linkAnuncio(p)}</span><span class="suave">${dataBr(p.criadaEm)}</span></div>
+    const sel = (v) => (p.avaliacao === v ? ' principal' : '');
+    h += `<div class="cartao" id="av-${p.id}"><div class="linha entre"><span class="suave">${linkAnuncio(p)}</span><span class="suave">${dataBr(p.criadaEm)}</span></div>
       <div class="pergunta">${esc(p.texto)}</div>
       <div class="grade2">
         <div><div class="suave">Respondido ${esc(quem)} ${p.respondidaEm ? `(${tempoEntre(p.criadaEm, p.respondidaEm)})` : ''}</div><div class="caixa">${esc(p.resposta || '')}</div></div>
-        <div><div class="suave">Nossa sugestão ${etiquetaOrigem(p)}</div><div class="caixa">${esc(p.sugestao || p.sugestaoMotivo || '')}</div></div>
+        <div><div class="suave">Sugestão do bot ${etiquetaOrigem(p)}</div><div class="caixa">${esc(p.sugestao || p.sugestaoMotivo || '')}</div></div>
       </div>
-      <div class="linha" style="margin-top:8px"><button class="acao" onclick="abrirEnsinar(${p.id})">A resposta da esquerda é a certa: ensinar ao bot</button></div>
-      ${blocoEnsinar(p.id, 'O bot guarda a resposta da esquerda como a certa para perguntas parecidas.')}
+      <div class="linha" style="margin-top:8px"><span class="suave">Qual é melhor?</span>
+        <button class="acao${sel('gobots')}" onclick="abrirEnsinar(${p.id})" ${p.resposta ? '' : 'disabled'}>A do Gobots (ensinar ao bot)</button>
+        <button class="acao${sel('iguais')}" onclick="avaliar(${p.id}, 'iguais', this)">Iguais</button>
+        <button class="acao${sel('bot')}" onclick="avaliar(${p.id}, 'bot', this)">A do bot</button></div>
+      <div class="ensinar" id="ens-${p.id}"><p>O bot guarda a resposta do Gobots como a certa para perguntas parecidas.</p>
+        <label for="lic-${p.id}" style="margin-top:0">Por quê? (opcional: vira uma regra que o bot segue em todas as perguntas)</label>
+        <input id="lic-${p.id}" maxlength="500" placeholder="Ex.: aviso de pagamento não é pergunta: só agradecer a compra">
+        <div class="linha" style="margin-top:8px"><button class="acao principal" onclick="avaliar(${p.id}, 'gobots', this)">Guardar na memória</button>
+        <button class="acao" onclick="abrirEnsinar(${p.id})">Cancelar</button></div></div>
       </div>`;
   }
   return h;
+}
+async function avaliar(id, melhor, btn) {
+  const lic = $(`#lic-${id}`);
+  await ocupado(btn, 'Salvando…', async () => {
+    try {
+      await api(`/api/perguntas/${id}/avaliar`, { metodo: 'POST', corpo: { melhor, licao: melhor === 'gobots' && lic ? lic.value : undefined } });
+      toast(melhor === 'gobots' ? 'Guardado na memória. O bot vai responder assim nas próximas parecidas.' : 'Avaliação salva.');
+      await mostrar('comparar', true);
+    } catch (e) { toast(e.message); }
+  });
 }
 // ---------------- Ensinar / Memória ----------------
 function blocoEnsinar(id, explica) {
@@ -649,7 +686,7 @@ async function telaMemoria() {
   const licoes = lista.filter((c) => c.ativa && c.licao).length;
   let h = `<div class="cartao"><b>O que o bot aprendeu</b>
     <p class="explica" style="margin:4px 0 0">Cada vez que alguém corrige uma sugestão, a resposta certa fica guardada aqui. Antes de responder, a IA lê as correções de perguntas parecidas e todas as lições. Correção de outro anúncio ensina a política e o jeito de responder, não os dados do produto.</p>
-    <p class="suave" style="margin:8px 0 0">Entra na memória quando você: clica em <b>Ensinar ao bot</b> numa pendente; envia pelo painel uma resposta bem diferente da sugestão; ou marca na aba <b>Respondidas</b> que a resposta do Gobots era a certa.</p>
+    <p class="suave" style="margin:8px 0 0">Entra na memória quando você: clica em <b>Ensinar ao bot</b> numa pendente; envia pelo painel uma resposta bem diferente da sugestão; ou escolhe na aba <b>Respondidas</b> que a resposta do Gobots era melhor.</p>
     <p style="margin:8px 0 0"><b>${ativas}</b> correção(ões) ativa(s), <b>${licoes}</b> com lição.</p></div>`;
   if (!lista.length) return h + '<div class="vazio"><b>Memória vazia</b>Corrija uma sugestão em Pendentes ou em Respondidas e clique em "Ensinar ao bot".</div>';
   const origens = { ensinar: 'ensinada no painel', envio: 'enviada pelo painel', gobots: 'resposta do Gobots' };

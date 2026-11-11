@@ -94,4 +94,16 @@ describe('memória de correções', () => {
     expect(pedidos[0]).not.toContain('LIÇÕES DA EQUIPE');
     expect(pedidos[0]).not.toContain('CORREÇÕES DA EQUIPE');
   });
+
+  it('na aba Respondidas: Gobots melhor ensina; nossa melhor desfaz', () => {
+    const p = nova('1', 'Ok. Pedido feito e pago via pix.');
+    expect(() => servico.avaliarResposta(p.id, 'gobots')).toThrow(/respondidas/);
+    pg.marcarRespondida(p.id, 'Boa noite. Agradecemos pela sua compra!', 'externo');
+    servico.avaliarResposta(p.id, 'gobots', 'Aviso de pagamento: só agradecer.');
+    expect(pg.lerPergunta(p.id)!.avaliacao).toBe('gobots');
+    expect(cor.listarCorrecoes()[0]).toMatchObject({ origem: 'gobots', resposta: 'Boa noite. Agradecemos pela sua compra!', ativa: true });
+    servico.avaliarResposta(p.id, 'bot');
+    expect(pg.lerPergunta(p.id)!.avaliacao).toBe('bot');
+    expect(cor.listarCorrecoes()[0].ativa).toBe(false);
+  });
 });

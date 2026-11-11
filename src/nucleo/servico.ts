@@ -1,10 +1,11 @@
-import { ehCorrecao, salvarCorrecao } from './correcoes';
+import { atualizarCorrecao, correcaoDaPergunta, ehCorrecao, salvarCorrecao } from './correcoes';
 import { banco, gravarEstado, lerEstado, agora } from '../banco';
 import { config } from '../config';
 import { conector } from '../conectores';
 import { guardarTitulos } from '../conectores/mercadolivre/conector';
 import { logger } from '../logger';
 import {
+  gravarAvaliacao,
   gravarSugestao,
   lerPergunta,
   lerPerguntaExterna,
@@ -245,4 +246,24 @@ export function ensinarResposta(id: number, dados: { texto?: string; licao?: str
   }
   logger.info(`[MEMÓRIA] correção ${c.id} (${origem}) guardada para a pergunta ${p.idExterno}`);
   return c;
+}
+
+/**
+ * Aba Respondidas: a pessoa escolhe qual resposta era melhor. "Gobots" ensina o bot com a resposta
+ * dada; "bot" ou "iguais" só contam para o placar (e desfazem um "Gobots" escolhido antes).
+ */
+export function avaliarResposta(id: number, melhor: 'gobots' | 'bot' | 'iguais', licao?: string | null) {
+  const p = lerPergunta(id);
+  if (!p) throw new Error('Pergunta não encontrada.');
+  if (p.status !== 'respondida') throw new Error('Só dá para avaliar perguntas já respondidas.');
+  if (!['gobots', 'bot', 'iguais'].includes(melhor)) throw new Error('Escolha gobots, bot ou iguais.');
+  if (melhor === 'gobots') {
+    if (!p.resposta) throw new Error('Essa pergunta não tem resposta registrada para ensinar.');
+    salvarCorrecao(p, p.resposta, 'gobots', licao);
+  } else {
+    const c = correcaoDaPergunta(id);
+    if (c && c.origem === 'gobots') atualizarCorrecao(c.id, { ativa: false });
+  }
+  gravarAvaliacao(id, melhor);
+  return lerPergunta(id)!;
 }
