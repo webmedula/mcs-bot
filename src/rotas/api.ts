@@ -18,9 +18,11 @@ import {
 } from '../nucleo/respostasProntas';
 import { carregarProntasIniciais } from '../nucleo/prontasIniciais';
 import { visaoGeral } from '../nucleo/visaoGeral';
+import { apagarCorrecao, atualizarCorrecao, contarCorrecoes, listarCorrecoes } from '../nucleo/correcoes';
 import { gravarRegrasDaLoja, lerRegrasDaLoja, REGRAS_PADRAO } from '../nucleo/regrasDaLoja';
 import {
   EnvioBloqueadoError,
+  ensinarResposta,
   estadoDoHistorico,
   importarHistorico,
   reaplicarRespostasProntas,
@@ -53,6 +55,7 @@ function estadoGeral() {
     ultimaSincronizacao: lerEstado('ultima-sincronizacao'),
     historico: estadoDoHistorico(),
     respostasProntas: listarRespostasProntas().filter((r) => r.ativa).length,
+    correcoes: contarCorrecoes(),
   };
 }
 
@@ -114,6 +117,29 @@ export async function rotasApi(app: FastifyInstance): Promise<void> {
       } catch (err) {
         return erro(reply, err);
       }
+    });
+
+    p.post('/api/perguntas/:id/ensinar', async (req, reply) => {
+      const b = (req.body ?? {}) as { texto?: string; licao?: string };
+      try {
+        return ensinarResposta(Number((req.params as any).id), { texto: b.texto, licao: b.licao });
+      } catch (err) {
+        return erro(reply, err);
+      }
+    });
+
+    // Memória de correções
+    p.get('/api/correcoes', async () => listarCorrecoes());
+    p.put('/api/correcoes/:id', async (req, reply) => {
+      try {
+        return atualizarCorrecao(Number((req.params as any).id), (req.body ?? {}) as any);
+      } catch (err) {
+        return erro(reply, err, 404);
+      }
+    });
+    p.delete('/api/correcoes/:id', async (req) => {
+      apagarCorrecao(Number((req.params as any).id));
+      return { ok: true };
     });
 
     p.post('/api/sincronizar', async () => sincronizarPendentes());

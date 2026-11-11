@@ -1,3 +1,4 @@
+import { ehCorrecao, salvarCorrecao } from './correcoes';
 import { banco, gravarEstado, lerEstado, agora } from '../banco';
 import { config } from '../config';
 import { conector } from '../conectores';
@@ -200,6 +201,8 @@ export async function responderPergunta(id: number, texto: string, por: 'painel'
   }
   await c.responder(p.idExterno, t);
   marcarRespondida(id, t, por);
+  // Quem aprovou mudou bastante a sugestão? Então o bot aprende com isso.
+  if (por === 'painel' && ehCorrecao(p.sugestao, t)) salvarCorrecao(p, t, 'envio');
   logger.info(`[ENVIO] pergunta ${p.idExterno} respondida por ${por}`);
   return lerPergunta(id)!;
 }
@@ -224,4 +227,22 @@ export function reaplicarRespostasProntas(): number {
     trocadas++;
   }
   return trocadas;
+}
+
+/**
+ * "Ensinar ao bot": guarda a resposta certa para esta pergunta. Na pendente, a sugestão passa a ser
+ * a corrigida (pronta para copiar ou enviar). Na aba Respondidas, ensina com o que foi respondido
+ * (por exemplo, quando a resposta do Gobots era melhor que a nossa).
+ */
+export function ensinarResposta(id: number, dados: { texto?: string; licao?: string | null }) {
+  const p = lerPergunta(id);
+  if (!p) throw new Error('Pergunta não encontrada.');
+  const origem = p.status === 'pendente' ? 'ensinar' : 'gobots';
+  const texto = (dados.texto ?? (origem === 'gobots' ? p.resposta : '') ?? '').trim();
+  const c = salvarCorrecao(p, texto, origem, dados.licao);
+  if (p.status === 'pendente') {
+    gravarSugestao(id, { texto, origem: 'ia', prontaId: null, confianca: 1, motivo: 'Corrigida pela equipe (o bot guardou para as próximas).' });
+  }
+  logger.info(`[MEMÓRIA] correção ${c.id} (${origem}) guardada para a pergunta ${p.idExterno}`);
+  return c;
 }

@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.6.0 (2026-11-11)
+
+- **Memória de correções**: o bot aprende com as correções da equipe. Antes de responder, a IA recebe as correções de perguntas parecidas (com a resposta errada e a certa) e todas as lições escritas pela equipe. Correção do mesmo anúncio pesa mais; correção de outro anúncio ensina a política e o jeito de responder, não os dados do produto.
+- Uma correção entra na memória quando alguém: clica em **Ensinar ao bot** numa pendente (funciona com o envio desligado); envia pelo painel uma resposta bem diferente da sugestão (ou uma em que o bot não tinha sugestão); ou marca na aba **Respondidas** que a resposta do Gobots era a certa. Campo opcional "Por quê?" vira uma lição que vale para todas as perguntas.
+- Aba **Memória**: lista o que o bot aprendeu, quantas vezes cada correção foi usada, e permite editar a lição, desativar ou apagar.
+- "Refazer sugestão" não apaga uma correção já ensinada para a mesma pergunta.
+- Aba Respondidas passa a mostrar também as perguntas em que o bot pediu uma pessoa (as que mais ensinam).
+
 ## 0.5.0 (2026-11-11)
 
 - **Visão geral**, nova tela inicial no estilo da home do Gobots: perguntas recebidas, respondidas e sem resposta (com "Atender agora"), tempo de resposta (mediana) e % respondidas em até 1 hora, quem respondeu (Gobots/fora, painel, bot sozinho), % das perguntas com sugestão do bot (resposta pronta × IA × precisou de pessoa), % de sugestões parecidas com o que o Gobots respondeu, gráfico de perguntas por dia, assuntos e anúncios com mais perguntas. Período de 7, 30 ou 90 dias, com seta de variação em relação ao período anterior. Rota `GET /api/visao-geral?dias=30`.

@@ -104,6 +104,9 @@ describe('fluxo', () => {
     const enviada = await servico.responderPergunta(a.id, 'Sim, emitimos.', 'painel');
     expect(enviada).toMatchObject({ status: 'respondida', respondidaPor: 'painel' });
     expect(respondidas).toEqual([{ id: '14', texto: 'Sim, emitimos.' }]);
+    // Sem sugestão boa (IA não configurada no teste): o que a pessoa escreveu vira memória.
+    const { listarCorrecoes } = await import('./correcoes');
+    expect(listarCorrecoes()).toMatchObject([{ origem: 'envio', pergunta: 'Tem nota?', resposta: 'Sim, emitimos.' }]);
 
     remoto.set('15', { ...remoto.get('15')!, status: 'respondida', resposta: 'do Gobots' });
     await expect(servico.responderPergunta(b.id, 'Tem sim.', 'painel')).rejects.toThrow(/já foi respondida/);
