@@ -22,6 +22,8 @@ export interface Pergunta {
   sugestaoMotivo: string | null;
   sugestaoEm: string | null;
   atualizadoEm: string;
+  /** Na aba Respondidas: qual resposta era melhor (gobots | bot | iguais). */
+  avaliacao: string | null;
   /** Vem do JOIN com produtos. */
   itemTitulo?: string | null;
   permalink?: string | null;
@@ -48,6 +50,7 @@ function daLinha(l: any): Pergunta {
     sugestaoMotivo: l.sugestao_motivo ?? null,
     sugestaoEm: l.sugestao_em ?? null,
     atualizadoEm: l.atualizado_em,
+    avaliacao: l.avaliacao ?? null,
     itemTitulo: l.item_titulo ?? null,
     permalink: l.permalink ?? null,
   };
@@ -192,4 +195,10 @@ export function tempoDeResposta(dias = 30): { quantidade: number; medianaMin: nu
   minutos.sort((a, b) => a - b);
   const medianaMin = minutos.length ? Math.round(minutos[Math.floor(minutos.length / 2)]) : null;
   return { quantidade: linhas.length, medianaMin, porQuem };
+}
+
+export type Avaliacao = 'gobots' | 'bot' | 'iguais';
+
+export function gravarAvaliacao(id: number, avaliacao: Avaliacao | null): void {
+  banco().prepare('UPDATE perguntas SET avaliacao = ?, atualizado_em = ? WHERE id = ?').run(avaliacao, agora(), id);
 }

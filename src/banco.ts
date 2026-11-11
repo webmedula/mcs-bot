@@ -107,6 +107,10 @@ function migrar(banco: DatabaseSync): void {
       valor  TEXT
     );
   `);
+  // Colunas novas em bancos que já existiam.
+  const colunas = (banco.prepare('PRAGMA table_info(perguntas)').all() as any[]).map((c) => c.name);
+  // Qual resposta era melhor, escolhido na aba Respondidas: gobots | bot | iguais.
+  if (!colunas.includes('avaliacao')) banco.exec('ALTER TABLE perguntas ADD COLUMN avaliacao TEXT');
 }
 
 export function banco(): DatabaseSync {

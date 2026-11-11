@@ -28,6 +28,7 @@ interface Linha {
   respondida_por: string | null;
   sugestao: string | null;
   sugestao_origem: string | null;
+  avaliacao: string | null;
 }
 
 export interface NumerosDoPeriodo {
@@ -44,6 +45,8 @@ export interface NumerosDoPeriodo {
   bot: { analisadas: number; pronta: number; ia: number; semSugestao: number; cobertura: number | null };
   /** Respondidas por fora que tinham sugestão nossa: quantas eram parecidas. */
   comparacao: { comparadas: number; parecidas: number; percentual: number | null };
+  /** Placar escolhido na aba Respondidas. */
+  avaliacoes: { bot: number; iguais: number; gobots: number; nossaMelhorOuIgual: number | null };
 }
 
 export interface VisaoGeral {
@@ -61,7 +64,7 @@ function lerLinhas(): Linha[] {
   const linhas = banco()
     .prepare(
       `SELECT p.item_id, pr.titulo, p.texto, p.criada_em, p.status, p.assunto, p.resposta, p.respondida_em,
-              p.respondida_por, p.sugestao, p.sugestao_origem
+              p.respondida_por, p.sugestao, p.sugestao_origem, p.avaliacao
        FROM perguntas p LEFT JOIN produtos pr ON pr.plataforma = p.plataforma AND pr.item_id = p.item_id`,
     )
     .all() as any[];
@@ -90,6 +93,7 @@ export function numerosDoPeriodo(linhas: Linha[]): NumerosDoPeriodo {
     porQuem: { externo: 0, painel: 0, 'mcs-bot': 0 },
     bot: { analisadas: 0, pronta: 0, ia: 0, semSugestao: 0, cobertura: null },
     comparacao: { comparadas: 0, parecidas: 0, percentual: null },
+    avaliacoes: { bot: 0, iguais: 0, gobots: 0, nossaMelhorOuIgual: null },
   };
   const minutos: number[] = [];
   for (const l of linhas) {
@@ -103,6 +107,7 @@ export function numerosDoPeriodo(linhas: Linha[]): NumerosDoPeriodo {
         n.comparacao.comparadas++;
         if (semelhanca(palavras(l.sugestao), palavras(l.resposta)) >= LIMITE_PARECIDA) n.comparacao.parecidas++;
       }
+      if (l.avaliacao === 'bot' || l.avaliacao === 'iguais' || l.avaliacao === 'gobots') n.avaliacoes[l.avaliacao]++;
     } else if (l.status === 'pendente') n.semResposta++;
     else n.fechadas++;
 
@@ -120,6 +125,8 @@ export function numerosDoPeriodo(linhas: Linha[]): NumerosDoPeriodo {
   }
   n.bot.cobertura = pct(n.bot.pronta + n.bot.ia, n.bot.analisadas);
   n.comparacao.percentual = pct(n.comparacao.parecidas, n.comparacao.comparadas);
+  const av = n.avaliacoes;
+  av.nossaMelhorOuIgual = pct(av.bot + av.iguais, av.bot + av.iguais + av.gobots);
   return n;
 }
 

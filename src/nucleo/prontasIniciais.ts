@@ -58,6 +58,13 @@ export const PRONTAS_INICIAIS: DadosRespostaPronta[] = [
     texto: 'Não fazemos troca direta, mas você pode pedir a devolução com reembolso pelo Mercado Livre, dentro do prazo, enviando o produto como recebeu (com caixa e manual). Se o produto chegar com algum problema, abra uma reclamação na compra com foto ou vídeo, que resolvemos.',
   },
   {
+    // Só avisos curtos de compra/pagamento. "Acabei de comprar, quero 4 laranja" NÃO casa: vai para a IA/pessoa.
+    titulo: 'Aviso de compra ou pagamento',
+    assunto: 'pos_compra',
+    gatilhos: ['pedido feito', 'ja paguei', 'pago via pix', 'pago no pix', 'pagamento feito', 'pagamento efetuado', 'efetuei pagamento'],
+    texto: 'Agradecemos pela sua compra! Assim que o pagamento for aprovado pelo Mercado Livre, o pedido é separado e enviado.',
+  },
+  {
     titulo: 'Retirada no local',
     assunto: 'retirada',
     gatilhos: ['retirar', 'retirada', 'retiro', 'buscar pessoalmente', 'pegar pessoalmente', 'loja fisica'],

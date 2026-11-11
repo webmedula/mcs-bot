@@ -27,6 +27,7 @@ describe('respostas prontas iniciais (planilha do Gobots)', () => {
     ['Se não servir posso trocar?', 'Troca e devolução'],
     ['Envia hoje?', 'Prazo de envio'],
     ['Quantos dias para chegar em Recife?', 'Prazo de entrega'],
+    ['Ok. Pedido feito e pago via pix.', 'Aviso de compra ou pagamento'],
   ])('%s → %s', (pergunta, titulo) => {
     carregarProntasIniciais();
     expect(encontrarRespostaPronta(pergunta, 'MLB1')?.pronta.titulo).toBe(titulo);
@@ -36,6 +37,8 @@ describe('respostas prontas iniciais (planilha do Gobots)', () => {
     carregarProntasIniciais();
     expect(encontrarRespostaPronta('Serve no Gol 2015? Comprei o carro novo', 'MLB1')).toBeNull();
     expect(encontrarRespostaPronta('É 12v ou 24v?', 'MLB1')).toBeNull();
+    // Compra feita com um pedido junto precisa de gente, não do "obrigado pela compra".
+    expect(encontrarRespostaPronta('Acabei de fazer a compra de 6 unidades, quero 4 laranja e 2 azul ok!!!', 'MLB1')).toBeNull();
   });
 
   it('garantia usa o texto alternativo quando o anúncio não tem', () => {

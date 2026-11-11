@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.7.0 (2026-11-11)
+
+- **Respondidas: escolha qual resposta é melhor** em cada pergunta: "A do Gobots (ensinar ao bot)", "Iguais" ou "A do bot". Escolher a do Gobots guarda a resposta na Memória (com o "Por quê?" opcional); trocar depois para "Iguais" ou "A do bot" desativa essa correção. Filtros "Para avaliar", "Gobots melhor" e "Todas", e placar no topo.
+- Visão geral: o cartão de comparação passa a mostrar o placar real ("bot empata ou ganha do Gobots") quando houver avaliações; sem avaliações, continua a estimativa por palavras.
+- Novo assunto **Aviso de compra ou pagamento** ("pedido feito e pago via pix", "já paguei"...) e resposta pronta inicial para ele, só para avisos curtos (quem manda um pedido junto, como "quero 4 laranja e 2 azul", continua indo para a IA/pessoa). Para ganhá-la em produção: botão "Carregar as da planilha do Gobots" (carrega só as que faltam).
+
 ## 0.6.0 (2026-11-11)
 
 - **Memória de correções**: o bot aprende com as correções da equipe. Antes de responder, a IA recebe as correções de perguntas parecidas (com a resposta errada e a certa) e todas as lições escritas pela equipe. Correção do mesmo anúncio pesa mais; correção de outro anúncio ensina a política e o jeito de responder, não os dados do produto.

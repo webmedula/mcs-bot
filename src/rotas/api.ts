@@ -22,6 +22,7 @@ import { apagarCorrecao, atualizarCorrecao, contarCorrecoes, listarCorrecoes } f
 import { gravarRegrasDaLoja, lerRegrasDaLoja, REGRAS_PADRAO } from '../nucleo/regrasDaLoja';
 import {
   EnvioBloqueadoError,
+  avaliarResposta,
   ensinarResposta,
   estadoDoHistorico,
   importarHistorico,
@@ -123,6 +124,15 @@ export async function rotasApi(app: FastifyInstance): Promise<void> {
       const b = (req.body ?? {}) as { texto?: string; licao?: string };
       try {
         return ensinarResposta(Number((req.params as any).id), { texto: b.texto, licao: b.licao });
+      } catch (err) {
+        return erro(reply, err);
+      }
+    });
+
+    p.post('/api/perguntas/:id/avaliar', async (req, reply) => {
+      const b = (req.body ?? {}) as { melhor?: any; licao?: string };
+      try {
+        return avaliarResposta(Number((req.params as any).id), b.melhor, b.licao);
       } catch (err) {
         return erro(reply, err);
       }

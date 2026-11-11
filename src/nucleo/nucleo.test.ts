@@ -34,6 +34,8 @@ describe('assuntos', () => {
     ['Qual a voltagem, 12v?', 'medidas'],
     ['Tem pronta entrega?', 'estoque'],
     ['Faz desconto no pix?', 'preco'],
+    ['Ok. Pedido feito e pago via pix.', 'pos_compra'],
+    ['Acabei de fazer a compra de 6 unidades, quero 4 laranja e 2 azul', 'pos_compra'],
     ['Quero saber a cor do céu', 'medidas'],
     ['kafka', 'outros'],
   ])('%s → %s', (texto, assunto) => {
