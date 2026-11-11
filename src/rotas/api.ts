@@ -17,6 +17,7 @@ import {
   listarRespostasProntas,
 } from '../nucleo/respostasProntas';
 import { carregarProntasIniciais } from '../nucleo/prontasIniciais';
+import { visaoGeral } from '../nucleo/visaoGeral';
 import { gravarRegrasDaLoja, lerRegrasDaLoja, REGRAS_PADRAO } from '../nucleo/regrasDaLoja';
 import {
   EnvioBloqueadoError,
@@ -118,6 +119,7 @@ export async function rotasApi(app: FastifyInstance): Promise<void> {
     p.post('/api/sincronizar', async () => sincronizarPendentes());
     p.post('/api/historico/importar', async () => importarHistorico());
     p.get('/api/frequentes', async () => perguntasFrequentes(config.historicoMax));
+    p.get('/api/visao-geral', async (req) => visaoGeral(Number((req.query as any).dias) || 30));
 
     // Respostas prontas
     p.get('/api/respostas-prontas', async () => listarRespostasProntas());

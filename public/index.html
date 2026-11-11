@@ -88,6 +88,39 @@
   #entrar { max-width: 380px; margin: 10vh auto; text-align: center; }
   #entrar .logo-login { background: var(--topo); border-radius: 12px; padding: 18px; margin-bottom: 16px; }
   #entrar .logo-login img { max-width: 220px; width: 100%; }
+  .vg-topo { display: flex; gap: 12px; align-items: center; justify-content: space-between; flex-wrap: wrap; margin-bottom: 4px; }
+  .vg-topo h2 { margin: 0; font-size: 22px; }
+  .vg-plataformas { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
+  .chip-plataforma { border: 1px solid var(--borda); background: #fff; border-radius: 8px; padding: 6px 12px; font-size: 14px; color: var(--suave); }
+  .chip-plataforma.ativo { border-color: var(--marca-escura); background: var(--marca-clara); color: var(--marca-escura); font-weight: 600; }
+  .vg-periodo { width: auto; padding: 6px 10px; }
+  .secao { font-size: 12px; font-weight: 700; letter-spacing: .6px; text-transform: uppercase; color: var(--suave); margin: 22px 0 10px; display: flex; align-items: center; gap: 8px; }
+  .secao::after { content: ''; flex: 1; height: 1px; background: var(--borda); }
+  .vg-grade { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; }
+  .vg-card { background: var(--cartao); border: 1px solid var(--borda); border-left: 4px solid var(--marca); border-radius: 12px; padding: 16px; box-shadow: var(--sombra); text-align: center; display: flex; flex-direction: column; align-items: center; gap: 4px; }
+  .vg-card .rotulo { font-size: 13px; color: var(--suave); }
+  .vg-card .valor { font-size: 30px; font-weight: 700; line-height: 1.15; }
+  .vg-card .valor small { font-size: 16px; color: var(--suave); font-weight: 500; }
+  .vg-card .acao { margin-top: 6px; }
+  .var { font-size: 13px; font-weight: 600; }
+  .var.bom { color: var(--verde); } .var.ruim { color: var(--vermelho); } .var.neutro { color: var(--suave); font-weight: 500; }
+  .pilha { display: flex; height: 10px; border-radius: 5px; overflow: hidden; background: #eef0f3; width: 100%; margin-top: 6px; }
+  .pilha > span { display: block; height: 100%; }
+  .legenda { display: flex; gap: 12px; flex-wrap: wrap; justify-content: center; font-size: 12px; color: var(--suave); margin-top: 6px; }
+  .legenda i { display: inline-block; width: 10px; height: 10px; border-radius: 2px; margin-right: 4px; vertical-align: -1px; }
+  .grafico { display: flex; align-items: flex-end; gap: 3px; height: 140px; padding-top: 8px; }
+  .grafico .col { flex: 1; display: flex; align-items: flex-end; height: 100%; position: relative; min-width: 3px; }
+  .grafico .col span { display: block; width: 100%; border-radius: 3px 3px 0 0; }
+  .grafico .rec { background: #ffd2b8; position: absolute; bottom: 0; left: 0; right: 0; }
+  .grafico .resp { background: var(--marca-escura); position: absolute; bottom: 0; left: 20%; right: 20%; }
+  .eixo { display: flex; justify-content: space-between; font-size: 12px; color: var(--suave); margin-top: 4px; }
+  .ranking { list-style: none; margin: 0; padding: 0; }
+  .ranking li { display: grid; grid-template-columns: 1fr auto; gap: 4px 10px; padding: 7px 0; border-bottom: 1px solid var(--borda); font-size: 14px; }
+  .ranking li:last-child { border-bottom: 0; }
+  .ranking .barra { grid-column: 1 / -1; height: 6px; }
+  .ranking .nome { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  @media (max-width: 860px) { .vg-grade { grid-template-columns: 1fr 1fr; } }
+  @media (max-width: 520px) { .vg-grade { grid-template-columns: 1fr; } }
   #toast { position: fixed; bottom: 18px; left: 50%; transform: translateX(-50%); background: var(--topo); color: #fff; padding: 10px 16px; border-radius: 10px; display: none; z-index: 10; max-width: 90vw; box-shadow: 0 8px 24px rgba(0,0,0,.2); }
 </style>
 <link rel="icon" type="image/png" href="/favicon.png">
@@ -108,9 +141,10 @@
   <header>
     <a class="marca" href="/"><img src="/logo.png" alt="MCS Brasil"><span>Bot de perguntas</span></a>
     <nav aria-label="Seções do painel">
+      <button data-aba="visao">Visão geral</button>
       <button data-aba="pendentes" class="ativo">Pendentes <span id="n-pendentes"></span></button>
-      <button data-aba="frequentes">Perguntas frequentes</button>
-      <button data-aba="prontas">Respostas prontas</button>
+      <button data-aba="frequentes" title="Perguntas frequentes">Frequentes</button>
+      <button data-aba="prontas" title="Respostas prontas e regras da loja">Respostas prontas</button>
       <button data-aba="comparar">Respondidas</button>
       <button data-aba="conexao">Conexão</button>
     </nav>
@@ -124,7 +158,8 @@
 const $ = (s) => document.querySelector(s);
 let estado = null;
 let assuntos = [];
-let aba = 'pendentes';
+let aba = 'visao';
+let periodoVisao = 30;
 
 function esc(s) { return String(s ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]); }
 function toast(msg) { const t = $('#toast'); t.textContent = msg; t.style.display = 'block'; clearTimeout(t._h); t._h = setTimeout(() => t.style.display = 'none', 4000); }
@@ -207,7 +242,7 @@ async function iniciar() {
   const p = new URLSearchParams(location.search);
   if (p.get('conectado')) { toast('Mercado Livre conectado.'); history.replaceState(null, '', '/'); }
   const inicial = location.hash.slice(1);
-  mostrar(['pendentes', 'frequentes', 'prontas', 'comparar', 'conexao'].includes(inicial) ? inicial : aba);
+  mostrar(['visao', 'pendentes', 'frequentes', 'prontas', 'comparar', 'conexao'].includes(inicial) ? inicial : aba);
   window.addEventListener('hashchange', () => { const h = location.hash.slice(1); if (h && h !== aba) mostrar(h); });
   setInterval(() => { if (aba === 'pendentes' && !document.querySelector('textarea:focus')) mostrar('pendentes', true); else carregarEstado(); }, 60_000);
 }
@@ -231,7 +266,7 @@ async function mostrar(nome, silencioso) {
   if (!silencioso) $('#conteudo').innerHTML = '<p class="vazio">Carregando…</p>';
   try {
     await carregarEstado();
-    const telas = { pendentes: telaPendentes, frequentes: telaFrequentes, prontas: telaProntas, comparar: telaComparar, conexao: telaConexao };
+    const telas = { visao: telaVisao, pendentes: telaPendentes, frequentes: telaFrequentes, prontas: telaProntas, comparar: telaComparar, conexao: telaConexao };
     $('#conteudo').innerHTML = await telas[nome]();
   } catch (e) { $('#conteudo').innerHTML = `<div class="aviso vermelho">${esc(e.message)}</div>`; }
 }
@@ -254,6 +289,87 @@ function etiquetaOrigem(p) {
 function linkAnuncio(p) {
   const nome = esc(p.itemTitulo || p.itemId || 'anúncio');
   return p.permalink ? `<a href="${esc(p.permalink)}" target="_blank" rel="noopener">${nome}</a>` : nome;
+}
+
+// ---------------- Visão geral ----------------
+const num = (n) => (n ?? 0).toLocaleString('pt-BR');
+const pctTxt = (n) => (n == null ? '–' : `${String(n).replace('.', ',')}%`);
+/** Seta e % em relação ao período anterior. menorMelhor: tempo de resposta, pendentes. */
+function variacao(atual, anterior, menorMelhor) {
+  if (atual == null || anterior == null) return '<span class="var neutro">sem comparação</span>';
+  if (!anterior) return atual ? '<span class="var neutro">sem base no período anterior</span>' : '<span class="var neutro">igual ao período anterior</span>';
+  const v = ((atual - anterior) / anterior) * 100;
+  if (Math.abs(v) < 0.5) return '<span class="var neutro">igual ao período anterior</span>';
+  const subiu = v > 0;
+  const bom = menorMelhor ? !subiu : subiu;
+  return `<span class="var ${bom ? 'bom' : 'ruim'}" title="período anterior: ${esc(String(anterior))}">${subiu ? '↑' : '↓'} ${Math.abs(v).toFixed(1).replace('.', ',')}% <span class="suave" style="font-weight:400">vs. anterior</span></span>`;
+}
+function mudarPeriodo(v) { periodoVisao = Number(v); mostrar('visao', true); }
+function irPendentes(assunto) { filtroAssunto = assunto || ''; history.pushState(null, '', '#pendentes'); mostrar('pendentes'); }
+
+async function telaVisao() {
+  const v = await api(`/api/visao-geral?dias=${periodoVisao}`);
+  const a = v.atual, b = v.anterior;
+  let h = avisosGerais();
+  h += `<div class="vg-topo"><h2>Visão geral</h2>
+    <div class="vg-plataformas"><span class="chip-plataforma ativo">Mercado Livre</span>
+      <label class="suave" for="vg-periodo" style="margin:0 0 0 8px">Período</label>
+      <select id="vg-periodo" class="vg-periodo" onchange="mudarPeriodo(this.value)">
+        ${[7, 30, 90].map((d) => `<option value="${d}" ${d === v.dias ? 'selected' : ''}>${d} dias</option>`).join('')}
+      </select></div></div>`;
+
+  h += `<div class="secao">Perguntas</div><div class="vg-grade">
+    <div class="vg-card"><div class="rotulo">Perguntas recebidas</div><div class="valor">${num(a.recebidas)}</div>${variacao(a.recebidas, b.recebidas)}</div>
+    <div class="vg-card"><div class="rotulo">Respondidas</div><div class="valor">${num(a.respondidas)}</div>${variacao(a.respondidas, b.respondidas)}</div>
+    <div class="vg-card"><div class="rotulo">Sem resposta agora</div><div class="valor">${num(v.agora.pendentes)}</div>
+      <span class="var ${v.agora.pendentesMais24h ? 'ruim' : 'neutro'}">${v.agora.pendentesMais24h ? `${v.agora.pendentesMais24h} há mais de 24 h` : v.agora.maisAntiga ? `mais antiga ${esc(haQuanto(v.agora.maisAntiga))}` : 'nenhuma esperando'}</span>
+      ${v.agora.pendentes ? '<button class="acao principal" onclick="irPendentes()">Atender agora</button>' : ''}</div>
+  </div>`;
+
+  const q = a.porQuem, totQ = q.externo + q.painel + q['mcs-bot'];
+  const fatia = (n, cor, nome) => (n ? `<span style="width:${(n / totQ) * 100}%;background:${cor}" title="${nome}: ${n}"></span>` : '');
+  h += `<div class="secao">Atendimento</div><div class="vg-grade">
+    <div class="vg-card"><div class="rotulo">Tempo de resposta (mediana)</div><div class="valor">${duracao(a.tempoMedianoMin)}</div>${variacao(a.tempoMedianoMin, b.tempoMedianoMin, true)}</div>
+    <div class="vg-card"><div class="rotulo">Respondidas em até 1 hora</div><div class="valor">${pctTxt(a.respondidasEm1h)}</div>${variacao(a.respondidasEm1h, b.respondidasEm1h)}</div>
+    <div class="vg-card"><div class="rotulo">Quem respondeu</div><div class="valor">${num(totQ)}</div>
+      <div class="pilha">${fatia(q.externo, '#8a93a3', 'Gobots / fora')}${fatia(q.painel, 'var(--marca-escura)', 'Painel')}${fatia(q['mcs-bot'], 'var(--verde)', 'Bot sozinho')}</div>
+      <div class="legenda"><span><i style="background:#8a93a3"></i>Gobots / fora ${num(q.externo)}</span><span><i style="background:var(--marca-escura)"></i>Painel ${num(q.painel)}</span><span><i style="background:var(--verde)"></i>Bot sozinho ${num(q['mcs-bot'])}</span></div></div>
+  </div>`;
+
+  const bot = a.bot, cmp = a.comparacao;
+  h += `<div class="secao">Indicadores do bot</div><div class="vg-grade">
+    <div class="vg-card"><div class="rotulo">Perguntas com sugestão do bot</div><div class="valor">${pctTxt(bot.cobertura)} <small>${num(bot.pronta + bot.ia)} de ${num(bot.analisadas)}</small></div>
+      ${bot.analisadas ? `<div class="pilha"><span style="width:${(bot.pronta / bot.analisadas) * 100}%;background:var(--verde)"></span><span style="width:${(bot.ia / bot.analisadas) * 100}%;background:var(--azul)"></span></div>
+      <div class="legenda"><span><i style="background:var(--verde)"></i>Resposta pronta ${num(bot.pronta)}</span><span><i style="background:var(--azul)"></i>IA ${num(bot.ia)}</span><span><i style="background:#eef0f3;border:1px solid var(--borda)"></i>Precisou de pessoa ${num(bot.semSugestao)}</span></div>` : '<span class="var neutro">aparece conforme chegam perguntas novas</span>'}</div>
+    <div class="vg-card"><div class="rotulo">Sugestão parecida com o que o Gobots respondeu</div><div class="valor">${pctTxt(cmp.percentual)} <small>${num(cmp.parecidas)} de ${num(cmp.comparadas)}</small></div>
+      <a href="#comparar" onclick="event.preventDefault(); history.pushState(null, '', '#comparar'); mostrar('comparar')" class="suave">ver lado a lado</a></div>
+    <div class="vg-card"><div class="rotulo">Respostas prontas ativas</div><div class="valor">${num(estado.respostasProntas)}</div>
+      <a href="#prontas" onclick="event.preventDefault(); history.pushState(null, '', '#prontas'); mostrar('prontas')" class="suave">gerenciar</a></div>
+  </div>`;
+
+  if (v.porDia.length) {
+    const max = Math.max(1, ...v.porDia.map((d) => d.recebidas));
+    const diaBr = (d) => d.slice(8, 10) + '/' + d.slice(5, 7);
+    h += `<div class="secao">Perguntas por dia</div><div class="cartao">
+      <div class="grafico" role="img" aria-label="Perguntas recebidas e respondidas por dia">${v.porDia.map((d) => `<div class="col" title="${diaBr(d.dia)}: ${d.recebidas} recebida(s), ${d.respondidas} respondida(s)">
+        <span class="rec" style="height:${(d.recebidas / max) * 100}%"></span><span class="resp" style="height:${(d.respondidas / max) * 100}%"></span></div>`).join('')}</div>
+      <div class="eixo"><span>${diaBr(v.porDia[0].dia)}</span><span>máx. ${max} por dia</span><span>${diaBr(v.porDia[v.porDia.length - 1].dia)}</span></div>
+      <div class="legenda"><span><i style="background:#ffd2b8"></i>Recebidas</span><span><i style="background:var(--marca-escura)"></i>Respondidas</span></div></div>`;
+  }
+
+  const maxA = Math.max(1, ...v.assuntos.map((x) => x.quantidade));
+  const maxN = Math.max(1, ...v.anuncios.map((x) => x.quantidade));
+  h += `<div class="grade2" style="margin-top:22px">
+    <div class="cartao"><b>Assuntos mais perguntados</b>
+      ${v.assuntos.length ? `<ul class="ranking">${v.assuntos.map((x) => `<li><span class="nome">${esc(x.nome)}</span><span class="suave">${num(x.quantidade)}</span>
+        <div class="barra"><div style="width:${(x.quantidade / maxA) * 100}%"></div></div></li>`).join('')}</ul>` : '<p class="suave">Sem perguntas no período.</p>'}</div>
+    <div class="cartao"><b>Anúncios com mais perguntas</b>
+      ${v.anuncios.length ? `<ul class="ranking">${v.anuncios.map((x) => `<li><span class="nome" title="${esc(x.titulo || x.itemId)}">${esc(x.titulo || x.itemId)}</span>
+        <span class="suave">${num(x.quantidade)}${x.pendentes ? ` · <b style="color:var(--marca-escura)">${x.pendentes} pendente(s)</b>` : ''}</span>
+        <div class="barra"><div style="width:${(x.quantidade / maxN) * 100}%"></div></div></li>`).join('')}</ul>
+        <p class="suave" style="margin:8px 0 0">Muita pergunta no mesmo anúncio costuma indicar informação faltando na descrição.</p>` : '<p class="suave">Sem perguntas no período.</p>'}</div>
+  </div>`;
+  return h;
 }
 
 // ---------------- Pendentes ----------------
