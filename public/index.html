@@ -300,6 +300,13 @@ function linkAnuncio(p) {
   return p.permalink ? `<a href="${esc(p.permalink)}" target="_blank" rel="noopener">${nome}</a>` : nome;
 }
 
+/** "de MARIA.SILVA82 (Maria) · " — o nome entre parênteses é o que vai na saudação. */
+function quemPerguntou(p) {
+  if (!p.compradorApelido) return '';
+  const nome = p.compradorNome ? ` <span title="vai na saudação da resposta">(${esc(p.compradorNome)})</span>` : '';
+  return `de ${esc(p.compradorApelido)}${nome} · `;
+}
+
 // ---------------- Visão geral ----------------
 const num = (n) => (n ?? 0).toLocaleString('pt-BR');
 const pctTxt = (n) => (n == null ? '–' : `${String(n).replace('.', ',')}%`);
@@ -459,7 +466,7 @@ async function telaPendentes() {
   }
   for (const p of lista) {
     h += `<div class="cartao card-pergunta ${classeOrigem(p)}" id="p-${p.id}">
-      <div class="linha entre"><span class="suave">${linkAnuncio(p)}</span><span class="suave">${haQuanto(p.criadaEm)}</span></div>
+      <div class="linha entre"><span class="suave">${linkAnuncio(p)}</span><span class="suave">${quemPerguntou(p)}${haQuanto(p.criadaEm)}</span></div>
       <div class="pergunta">${esc(p.texto)}</div>
       <div class="linha"><span class="etiqueta">${esc(p.assuntoNome)}</span>${etiquetaOrigem(p)}<span class="suave">${esc(p.sugestaoMotivo || '')}</span></div>
       <label for="t-${p.id}">Resposta</label>
@@ -579,7 +586,7 @@ function novaProntaDe(d) {
     assunto: d.assunto || '',
     gatilhos: d.gatilho ? [d.gatilho] : [],
     // Saudação e assinatura entram sozinhas (e "Boa noite" de manhã fica estranho).
-    texto: (d.resposta || '').replace(/^(ol[aá]|oi|bom dia|boa tarde|boa noite)[!,.]*\s*/i, '').replace(/\s*atenciosamente,?\s*equipe mcs\.?\s*$/i, ''),
+    texto: (d.resposta || '').replace(/^(ol[aá]|oi|bom dia|boa tarde|boa noite)(\s*,\s*(?!tudo\b)[A-Za-zÀ-ÿ]+)?[!,.]*\s*/i, '').replace(/\s*atenciosamente,?\s*equipe mcs\.?\s*$/i, ''),
     escopo: doProduto ? d.itemId : 'geral',
     itemTitulo: doProduto ? d.itemTitulo : null,
   };

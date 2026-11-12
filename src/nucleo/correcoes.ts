@@ -65,7 +65,8 @@ export function semSaudacaoEAssinatura(t: string): string {
   let x = (t || '').trim();
   const assin = config.assinatura.trim();
   if (assin && x.toLowerCase().endsWith(assin.toLowerCase())) x = x.slice(0, x.length - assin.length).trim();
-  x = x.replace(/^(ol[aá]|oi|bom dia|boa tarde|boa noite)[!,.]*\s*(tudo bem\??\s*)?/i, '').trim();
+  // "Olá, Maria!" também: o nome de quem perguntou não serve de exemplo para outra pessoa.
+  x = x.replace(/^(ol[aá]|oi|bom dia|boa tarde|boa noite)(\s*,\s*(?!tudo\b)[A-Za-zÀ-ÿ]+)?[!,.]*\s*(tudo bem\??\s*)?/i, '').trim();
   return x;
 }
 

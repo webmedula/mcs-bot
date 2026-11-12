@@ -1,5 +1,6 @@
 import { agora, banco } from '../banco';
 import { classificarAssunto } from './assuntos';
+import { primeiroNomeDoApelido } from './comprador';
 import type { PerguntaExterna, Plataforma, StatusPergunta } from './tipos';
 
 export interface Pergunta {
@@ -29,6 +30,9 @@ export interface Pergunta {
   /** Vem do JOIN com produtos. */
   itemTitulo?: string | null;
   permalink?: string | null;
+  /** Vem do JOIN com compradores: apelido público e o primeiro nome tirado dele. */
+  compradorApelido?: string | null;
+  compradorNome?: string | null;
 }
 
 function daLinha(l: any): Pergunta {
@@ -56,11 +60,14 @@ function daLinha(l: any): Pergunta {
     arquivada: Boolean(l.arquivada),
     itemTitulo: l.item_titulo ?? null,
     permalink: l.permalink ?? null,
+    compradorApelido: l.comprador_apelido ?? null,
+    compradorNome: primeiroNomeDoApelido(l.comprador_apelido),
   };
 }
 
-const SELECT = `SELECT p.*, pr.titulo AS item_titulo, pr.permalink AS permalink
-  FROM perguntas p LEFT JOIN produtos pr ON pr.plataforma = p.plataforma AND pr.item_id = p.item_id`;
+const SELECT = `SELECT p.*, pr.titulo AS item_titulo, pr.permalink AS permalink, cp.apelido AS comprador_apelido
+  FROM perguntas p LEFT JOIN produtos pr ON pr.plataforma = p.plataforma AND pr.item_id = p.item_id
+  LEFT JOIN compradores cp ON cp.plataforma = p.plataforma AND cp.comprador_id = p.comprador_id`;
 
 /**
  * Grava ou atualiza a pergunta vinda da plataforma. Nunca apaga a sugestão. Se ela estava pendente

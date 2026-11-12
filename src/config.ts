@@ -52,6 +52,8 @@ export const config = {
   // ---------- Texto das respostas ----------
   saudacao: process.env.RESPOSTA_SAUDACAO ?? 'Olá!',
   assinatura: process.env.RESPOSTA_ASSINATURA ?? 'Atenciosamente, equipe MCS.',
+  /** Põe o primeiro nome de quem pergunta na saudação ("Olá, Maria!") quando o apelido tem cara de nome. */
+  respostaComNome: ligado(process.env.RESPOSTA_COM_NOME, true),
 
   // ---------- IA (mesmas variáveis do Gerente IA) ----------
   /** 'anthropic' | 'openrouter'. Vazio = usa a chave que existir (com as duas, OpenRouter). */

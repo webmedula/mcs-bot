@@ -7,7 +7,7 @@ import { lerToken } from './oauth';
 /**
  * CONECTOR DO MERCADO LIVRE: traduz a API do ML para o formato do núcleo.
  * Rotas usadas: /questions/search, /questions/{id}, /answers, /items/{id}, /items/{id}/description,
- * /items/{id}/compatibilities e /users/{id}/items/search.
+ * /items/{id}/compatibilities, /users/{id}/items/search e /users/{id} (apelido de quem pergunta).
  */
 
 export function statusDoMl(s: string | undefined): StatusPergunta {
@@ -310,5 +310,10 @@ export const conectorMercadoLivre: Conector = {
 
   async responder(idExterno, textoResposta) {
     await ml('/answers', { metodo: 'POST', corpo: { question_id: Number(idExterno), text: textoResposta } });
+  },
+
+  async apelidoDoComprador(compradorId) {
+    const u: any = await ml(`/users/${encodeURIComponent(compradorId)}`);
+    return u?.nickname ? String(u.nickname) : null;
   },
 };

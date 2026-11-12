@@ -3,6 +3,7 @@ import { config } from '../config';
 import { completar, iaConfigurada } from '../ia/provedor';
 import { logger } from '../logger';
 import { nomeDoAssunto } from './assuntos';
+import { compradorGuardado, outrasPerguntasDoComprador } from './comprador';
 import { contarUsoDasCorrecoes, correcaoDaPergunta, memoriaParaIa } from './correcoes';
 import { lerRegrasDaLoja } from './regrasDaLoja';
 import { gravarSugestao, lerPergunta, type Pergunta, type Sugestao } from './perguntas';
@@ -22,10 +23,17 @@ import type { FichaDoProduto } from './tipos';
 
 const LIMITE_ML = 2000;
 
-/** Saudação + corpo + assinatura, sem repetir o que o corpo já trouxer. */
-export function montarTexto(corpo: string): string {
-  let t = corpo.trim();
+/** "Olá!" + nome → "Olá, Maria!". Sem nome (ou com RESPOSTA_COM_NOME=false), a saudação de sempre. */
+export function saudacaoPara(nome?: string | null): string {
   const saud = config.saudacao.trim();
+  if (!saud || !nome || !config.respostaComNome) return saud;
+  return /[!.]$/.test(saud) ? saud.replace(/[!.]$/, `, ${nome}!`) : `${saud}, ${nome}!`;
+}
+
+/** Saudação + corpo + assinatura, sem repetir o que o corpo já trouxer. */
+export function montarTexto(corpo: string, nome?: string | null): string {
+  let t = corpo.trim();
+  const saud = saudacaoPara(nome);
   const assin = config.assinatura.trim();
   if (saud && !/^(ol[aá]|oi|bom dia|boa tarde|boa noite|prezad)/i.test(t)) t = `${saud} ${t}`;
   if (assin && !t.toLowerCase().includes(assin.toLowerCase())) t = `${t} ${assin}`;
@@ -90,8 +98,10 @@ REGRAS (obrigatórias):
 - Não prometa prazo de entrega exato: o prazo aparece no anúncio ao informar o CEP.
 - Preço: use só o "Preço agora" da ficha. Se estiver em promoção, pode dizer que o valor é
   promocional, sem prometer até quando vale. Não ofereça desconto que não esteja na ficha.
-- Português do Brasil, cordial, direto, no máximo 3 frases. Sem saudação e sem assinatura: elas são
-  acrescentadas depois.
+- Português do Brasil, cordial, direto, no máximo 3 frases. Sem saudação, sem o nome da pessoa e sem
+  assinatura: elas são acrescentadas depois.
+- OUTRAS PERGUNTAS DESTA PESSOA servem de contexto (ex.: o carro que ela já citou). Use só se
+  ajudarem a responder a pergunta atual; não comente que ela já perguntou antes.
 - Se a pergunta for ofensiva, não for pergunta, ou você não tiver base para responder com certeza,
   marque precisa_humano = true.
 
@@ -132,9 +142,15 @@ export async function sugerirComIa(p: Pergunta, ficha: FichaDoProduto | null): P
   }
   const anteriores = respostasAnteriores(p);
   const memoria = memoriaParaIa(p);
+  const comprador = compradorGuardado(p.plataforma, p.compradorId);
+  const outras = outrasPerguntasDoComprador(p);
   const usuario = [
     `PERGUNTA DO COMPRADOR: ${p.texto}`,
     `Assunto detectado: ${nomeDoAssunto(p.assunto)}`,
+    ...(comprador?.apelido ? [`Quem pergunta: apelido ${comprador.apelido}${comprador.primeiroNome ? ` (primeiro nome provável: ${comprador.primeiroNome})` : ''}`] : []),
+    ...(outras.length
+      ? ['OUTRAS PERGUNTAS DESTA PESSOA (mais novas primeiro):', ...outras.map((o) => `- [${o.anuncio || 'anúncio?'}] P: ${o.pergunta}${o.resposta ? ` | R: ${o.resposta}` : ' | (sem resposta)'}`)]
+      : []),
     '',
     'REGRAS DA LOJA (valem para todos os anúncios):',
     lerRegrasDaLoja() || '(nenhuma regra cadastrada)',
@@ -158,7 +174,7 @@ export async function sugerirComIa(p: Pergunta, ficha: FichaDoProduto | null): P
   }
   const motivo = j.motivo || 'Resposta da IA com base na ficha do anúncio.';
   return {
-    texto: montarTexto(limparDadosDeContato(j.resposta)),
+    texto: montarTexto(limparDadosDeContato(j.resposta), comprador?.primeiroNome),
     origem: 'ia',
     prontaId: null,
     confianca: j.confianca,
@@ -170,7 +186,7 @@ export function sugerirComPronta(p: Pergunta, ficha: FichaDoProduto | null): Sug
   const c = encontrarRespostaPronta(p.texto, p.itemId);
   if (!c) return null;
   return {
-    texto: montarTexto(preencherModelo(c.pronta.texto, ficha)),
+    texto: montarTexto(preencherModelo(c.pronta.texto, ficha), compradorGuardado(p.plataforma, p.compradorId)?.primeiroNome),
     origem: 'pronta',
     prontaId: c.pronta.id,
     confianca: c.confianca,

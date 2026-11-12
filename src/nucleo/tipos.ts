@@ -58,4 +58,6 @@ export interface Conector {
   buscarHistorico(max: number, aoAvancar: (pagina: PerguntaExterna[]) => void): Promise<{ lidas: number; parouPor: string }>;
   fichaDoProduto(itemId: string): Promise<FichaDoProduto>;
   responder(idExterno: string, texto: string): Promise<void>;
+  /** Apelido público de quem perguntou (o ML não mostra o nome de verdade antes da compra). */
+  apelidoDoComprador?(compradorId: string): Promise<string | null>;
 }

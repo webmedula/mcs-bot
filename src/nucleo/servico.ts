@@ -1,3 +1,4 @@
+import { conhecerComprador } from './comprador';
 import { atualizarCorrecao, correcaoDaPergunta, ehCorrecao, salvarCorrecao } from './correcoes';
 import { banco, gravarEstado, lerEstado, agora } from '../banco';
 import { config } from '../config';
@@ -16,7 +17,7 @@ import {
   salvarPergunta,
   type Pergunta,
 } from './perguntas';
-import { gerarSugestao, sugerirComPronta } from './sugestao';
+import { gerarSugestao, saudacaoPara, sugerirComPronta } from './sugestao';
 import { contarUso } from './respostasProntas';
 import type { FichaDoProduto, PerguntaExterna, Plataforma } from './tipos';
 
@@ -39,9 +40,22 @@ async function fichaSemErro(p: Pergunta): Promise<FichaDoProduto | null> {
   }
 }
 
+/** Troca "Olá!" por "Olá, Maria!" no começo da sugestão (sem chamar a IA de novo). */
+export function colocarNomeNaSugestao(p: Pergunta, nome: string): void {
+  const saud = config.saudacao.trim();
+  if (!p.sugestao || !saud || !config.respostaComNome || !p.sugestao.startsWith(saud)) return;
+  const nova = saudacaoPara(nome) + p.sugestao.slice(saud.length);
+  banco().prepare('UPDATE perguntas SET sugestao = ? WHERE id = ?').run(nova, p.id);
+}
+
 /** Grava a pergunta e, se estiver pendente sem sugestão, monta a sugestão. */
 export async function processarPergunta(e: PerguntaExterna): Promise<Pergunta> {
   const { pergunta } = salvarPergunta(e);
+  // Pendente que já tinha sugestão (de antes da versão com nome): só põe o nome na saudação.
+  if (pergunta.status === 'pendente' && pergunta.sugestaoEm && !pergunta.compradorApelido) {
+    const c = await conhecerComprador(pergunta);
+    if (c?.primeiroNome) colocarNomeNaSugestao(pergunta, c.primeiroNome);
+  }
   if (pergunta.status === 'pendente' && !pergunta.sugestaoEm) {
     // Pergunta muito velha (de anúncio parado, por exemplo) não gasta IA sozinha.
     if (ehAntiga(pergunta.criadaEm, config.perguntaAntigaDias)) {
@@ -51,6 +65,7 @@ export async function processarPergunta(e: PerguntaExterna): Promise<Pergunta> {
       });
       return lerPergunta(pergunta.id)!;
     }
+    await conhecerComprador(pergunta);
     const ficha = await fichaSemErro(pergunta);
     await gerarSugestao(pergunta.id, ficha);
   }
@@ -60,6 +75,7 @@ export async function processarPergunta(e: PerguntaExterna): Promise<Pergunta> {
 export async function refazerSugestao(id: number): Promise<Pergunta> {
   const p = lerPergunta(id);
   if (!p) throw new Error('Pergunta não encontrada.');
+  await conhecerComprador(p);
   const ficha = await fichaSemErro(p);
   await gerarSugestao(id, ficha);
   return lerPergunta(id)!;

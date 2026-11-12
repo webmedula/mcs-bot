@@ -101,6 +101,15 @@ function migrar(banco: DatabaseSync): void {
       criada_em      TEXT NOT NULL
     );
 
+    -- Apelido público de quem pergunta (lido uma vez da plataforma) e o primeiro nome tirado dele.
+    CREATE TABLE IF NOT EXISTS compradores (
+      plataforma    TEXT NOT NULL,
+      comprador_id  TEXT NOT NULL,
+      apelido       TEXT,
+      lido_em       TEXT NOT NULL,
+      PRIMARY KEY (plataforma, comprador_id)
+    );
+
     -- Chave/valor: login do ML, progresso da importação, últimos erros.
     CREATE TABLE IF NOT EXISTS estado (
       chave  TEXT PRIMARY KEY,
