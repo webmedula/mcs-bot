@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.11.0 (2026-11-12)
+
+- **Painel lateral "Treinar resposta".** Em qualquer pergunta (Pendentes, Respondidas e Frequentes) um botão abre um painel ao lado com o anúncio (título, MLB e SKU), a pergunta, a sugestão do bot, a resposta certa para editar, o "Vale para" e a regra que o bot aprende. Substitui o "Ensinar ao bot" que abria embaixo de cada pergunta; "Virar resposta pronta" fica dentro do painel.
+- **"Vale para" na memória.** Cada correção agora tem alcance: só este anúncio, este produto (mesmo SKU em qualquer anúncio) ou qualquer pergunta do tema. A correção e a lição dela só chegam à IA nas perguntas em que valem. O padrão é "só este anúncio" em compatibilidade, medidas, lado/kit e instalação, e "qualquer pergunta" no resto. As correções antigas continuam valendo para qualquer pergunta; dá para mudar na aba Memória.
+- **👍 / 👎 na sugestão.** Em cada pendente com sugestão. O 👍 marca que estava boa; o 👎 abre o painel de treino para escrever a certa. O placar aparece em Pendentes. O voto zera quando a sugestão é refeita.
+- Rota `POST /api/perguntas/:id/voto`; `ensinar`, `avaliar` e `POST /api/correcoes` aceitam `escopo`.
+
 ## 0.10.0 (2026-11-12)
 
 - **Nome de quem pergunta na resposta.** O bot lê o apelido público do comprador no ML (`/users/{id}`, uma vez por pessoa) e tira dele o primeiro nome quando é um nome comum ("MARIA.SILVA82" → Maria, "JOAOPAULO_RS" → João). A saudação vira "Olá, Maria!". Apelido sem cara de nome ("AUTOPECAS2020") fica no "Olá!" de sempre. Desliga com `RESPOSTA_COM_NOME=false`.

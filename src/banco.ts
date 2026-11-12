@@ -122,6 +122,12 @@ function migrar(banco: DatabaseSync): void {
   if (!colunas.includes('avaliacao')) banco.exec('ALTER TABLE perguntas ADD COLUMN avaliacao TEXT');
   // Pendente arquivada: some da lista do painel (continua sem resposta no ML).
   if (!colunas.includes('arquivada')) banco.exec('ALTER TABLE perguntas ADD COLUMN arquivada INTEGER NOT NULL DEFAULT 0');
+  // Avaliação rápida da sugestão no painel (joinha): bom | ruim.
+  if (!colunas.includes('sugestao_voto')) banco.exec('ALTER TABLE perguntas ADD COLUMN sugestao_voto TEXT');
+  // Para onde a correção vale: geral (qualquer pergunta do tema) | anuncio (só o anúncio dela) | produto (mesmo SKU).
+  const colsCorrecoes = (banco.prepare('PRAGMA table_info(correcoes)').all() as any[]).map((c) => c.name);
+  if (!colsCorrecoes.includes('escopo')) banco.exec("ALTER TABLE correcoes ADD COLUMN escopo TEXT NOT NULL DEFAULT 'geral'");
+  if (!colsCorrecoes.includes('sku')) banco.exec('ALTER TABLE correcoes ADD COLUMN sku TEXT');
   // Situação do anúncio na plataforma (active, paused, closed, under_review, inactive) e quando foi lida.
   const colsProdutos = (banco.prepare('PRAGMA table_info(produtos)').all() as any[]).map((c) => c.name);
   if (!colsProdutos.includes('situacao')) banco.exec('ALTER TABLE produtos ADD COLUMN situacao TEXT');

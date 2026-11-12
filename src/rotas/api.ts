@@ -8,7 +8,7 @@ import { lerToken } from '../conectores/mercadolivre/oauth';
 import { descricaoDaIa } from '../ia/provedor';
 import { classificarAssunto, nomeDoAssunto } from '../nucleo/assuntos';
 import { LISTA_DE_ASSUNTOS, perguntasFrequentes } from '../nucleo/frequentes';
-import { arquivarAntigas, arquivarForaDoAr, arquivarPergunta, contarPorStatus, ehAntiga, lerPergunta, listarPerguntas, tempoDeResposta, type FiltroPerguntas } from '../nucleo/perguntas';
+import { arquivarAntigas, arquivarForaDoAr, arquivarPergunta, contarPorStatus, contarVotos, ehAntiga, lerPergunta, listarPerguntas, tempoDeResposta, type FiltroPerguntas } from '../nucleo/perguntas';
 import {
   apagarRespostaPronta,
   atualizarRespostaPronta,
@@ -18,7 +18,7 @@ import {
 } from '../nucleo/respostasProntas';
 import { carregarProntasIniciais } from '../nucleo/prontasIniciais';
 import { visaoGeral } from '../nucleo/visaoGeral';
-import { apagarCorrecao, atualizarCorrecao, contarCorrecoes, listarCorrecoes, salvarCorrecaoAvulsa } from '../nucleo/correcoes';
+import { apagarCorrecao, atualizarCorrecao, contarCorrecoes, escopoValido, listarCorrecoes, salvarCorrecaoAvulsa } from '../nucleo/correcoes';
 import { gravarRegrasDaLoja, lerRegrasDaLoja, REGRAS_PADRAO } from '../nucleo/regrasDaLoja';
 import {
   EnvioBloqueadoError,
@@ -30,6 +30,7 @@ import {
   refazerSugestao,
   responderPergunta,
   sincronizarPendentes,
+  votarSugestao,
 } from '../nucleo/servico';
 import { VERSAO } from '../versao';
 
@@ -66,6 +67,7 @@ function estadoGeral() {
       .all() as any[])
       .filter((l) => !ehAntiga(l.criada_em, config.perguntaAntigaDias)).length,
     correcoes: contarCorrecoes(),
+    votos: contarVotos(),
   };
 }
 
@@ -131,18 +133,26 @@ export async function rotasApi(app: FastifyInstance): Promise<void> {
     });
 
     p.post('/api/perguntas/:id/ensinar', async (req, reply) => {
-      const b = (req.body ?? {}) as { texto?: string; licao?: string };
+      const b = (req.body ?? {}) as { texto?: string; licao?: string; escopo?: string };
       try {
-        return ensinarResposta(Number((req.params as any).id), { texto: b.texto, licao: b.licao });
+        return ensinarResposta(Number((req.params as any).id), { texto: b.texto, licao: b.licao, escopo: escopoValido(b.escopo) });
       } catch (err) {
         return erro(reply, err);
       }
     });
 
     p.post('/api/perguntas/:id/avaliar', async (req, reply) => {
-      const b = (req.body ?? {}) as { melhor?: any; licao?: string };
+      const b = (req.body ?? {}) as { melhor?: any; licao?: string; texto?: string; escopo?: string };
       try {
-        return avaliarResposta(Number((req.params as any).id), b.melhor, b.licao);
+        return avaliarResposta(Number((req.params as any).id), b.melhor, b.licao, { texto: b.texto, escopo: escopoValido(b.escopo) });
+      } catch (err) {
+        return erro(reply, err);
+      }
+    });
+
+    p.post('/api/perguntas/:id/voto', async (req, reply) => {
+      try {
+        return votarSugestao(Number((req.params as any).id), ((req.body as any)?.voto ?? null) as any);
       } catch (err) {
         return erro(reply, err);
       }
