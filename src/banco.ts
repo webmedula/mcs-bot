@@ -111,6 +111,8 @@ function migrar(banco: DatabaseSync): void {
   const colunas = (banco.prepare('PRAGMA table_info(perguntas)').all() as any[]).map((c) => c.name);
   // Qual resposta era melhor, escolhido na aba Respondidas: gobots | bot | iguais.
   if (!colunas.includes('avaliacao')) banco.exec('ALTER TABLE perguntas ADD COLUMN avaliacao TEXT');
+  // Pendente arquivada: some da lista do painel (continua sem resposta no ML).
+  if (!colunas.includes('arquivada')) banco.exec('ALTER TABLE perguntas ADD COLUMN arquivada INTEGER NOT NULL DEFAULT 0');
 }
 
 export function banco(): DatabaseSync {

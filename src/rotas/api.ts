@@ -8,7 +8,7 @@ import { lerToken } from '../conectores/mercadolivre/oauth';
 import { descricaoDaIa } from '../ia/provedor';
 import { classificarAssunto, nomeDoAssunto } from '../nucleo/assuntos';
 import { LISTA_DE_ASSUNTOS, perguntasFrequentes } from '../nucleo/frequentes';
-import { contarPorStatus, lerPergunta, listarPerguntas, tempoDeResposta, type FiltroPerguntas } from '../nucleo/perguntas';
+import { arquivarAntigas, arquivarPergunta, contarPorStatus, ehAntiga, lerPergunta, listarPerguntas, tempoDeResposta, type FiltroPerguntas } from '../nucleo/perguntas';
 import {
   apagarRespostaPronta,
   atualizarRespostaPronta,
@@ -56,6 +56,10 @@ function estadoGeral() {
     ultimaSincronizacao: lerEstado('ultima-sincronizacao'),
     historico: estadoDoHistorico(),
     respostasProntas: listarRespostasProntas().filter((r) => r.ativa).length,
+    perguntaAntigaDias: config.perguntaAntigaDias,
+    // O contador do menu mostra só as recentes (as antigas ficam numa aba à parte).
+    pendentesRecentes: (banco().prepare(`SELECT criada_em FROM perguntas WHERE status = 'pendente' AND arquivada = 0`).all() as any[])
+      .filter((l) => !ehAntiga(l.criada_em, config.perguntaAntigaDias)).length,
     correcoes: contarCorrecoes(),
   };
 }
@@ -90,6 +94,7 @@ export async function rotasApi(app: FastifyInstance): Promise<void> {
         busca: q.busca || undefined,
         limite: q.limite ? Number(q.limite) : undefined,
         comSugestao: q.comSugestao === '1',
+        arquivadas: q.arquivadas === '1',
       };
       return listarPerguntas(f).map((x) => ({ ...x, assuntoNome: nomeDoAssunto(x.assunto) }));
     });
@@ -137,6 +142,14 @@ export async function rotasApi(app: FastifyInstance): Promise<void> {
         return erro(reply, err);
       }
     });
+
+    p.post('/api/perguntas/:id/arquivar', async (req, reply) => {
+      const id = Number((req.params as any).id);
+      if (!lerPergunta(id)) return erro(reply, new Error('Pergunta não encontrada.'), 404);
+      arquivarPergunta(id, (req.body as any)?.arquivada !== false);
+      return { ok: true };
+    });
+    p.post('/api/perguntas/arquivar-antigas', async () => ({ arquivadas: arquivarAntigas(config.perguntaAntigaDias) }));
 
     // Memória de correções
     p.get('/api/correcoes', async () => listarCorrecoes());

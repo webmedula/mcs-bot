@@ -24,6 +24,8 @@ export interface Pergunta {
   atualizadoEm: string;
   /** Na aba Respondidas: qual resposta era melhor (gobots | bot | iguais). */
   avaliacao: string | null;
+  /** Pendente tirada da lista do painel (antiga, sem como responder...). */
+  arquivada: boolean;
   /** Vem do JOIN com produtos. */
   itemTitulo?: string | null;
   permalink?: string | null;
@@ -51,6 +53,7 @@ function daLinha(l: any): Pergunta {
     sugestaoEm: l.sugestao_em ?? null,
     atualizadoEm: l.atualizado_em,
     avaliacao: l.avaliacao ?? null,
+    arquivada: Boolean(l.arquivada),
     itemTitulo: l.item_titulo ?? null,
     permalink: l.permalink ?? null,
   };
@@ -112,6 +115,8 @@ export interface FiltroPerguntas {
   limite?: number;
   /** Só as respondidas que tinham sugestão nossa (para comparar com o Gobots). */
   comSugestao?: boolean;
+  /** Nas pendentes: false (padrão) esconde as arquivadas; true mostra só as arquivadas. */
+  arquivadas?: boolean;
 }
 
 export function listarPerguntas(f: FiltroPerguntas = {}): Pergunta[] {
@@ -132,7 +137,9 @@ export function listarPerguntas(f: FiltroPerguntas = {}): Pergunta[] {
   }
   // "Passou pelo bot": inclui as que a IA devolveu para uma pessoa (sem texto), que são as que mais ensinam.
   if (f.comSugestao) where.push('p.sugestao_origem IS NOT NULL');
-  const ordem = f.status === 'pendente' ? 'p.criada_em ASC' : 'p.criada_em DESC';
+  if (f.status === 'pendente') where.push(f.arquivadas ? 'p.arquivada = 1' : 'p.arquivada = 0');
+  // Mais novas primeiro: no ML quem perguntou agora é quem ainda está decidindo a compra.
+  const ordem = 'p.criada_em DESC';
   const limite = Math.min(Math.max(f.limite ?? 100, 1), 1000);
   const sql = `${SELECT} ${where.length ? `WHERE ${where.join(' AND ')}` : ''} ORDER BY ${ordem} LIMIT ${limite}`;
   return (banco().prepare(sql).all(...args) as any[]).map(daLinha);
@@ -168,11 +175,34 @@ export function marcarRespondida(id: number, texto: string, por: 'painel' | 'mcs
     .run(texto, t, por, t, id);
 }
 
+/** "pendente" conta só as que estão na lista (não arquivadas); "arquivada" conta à parte. */
 export function contarPorStatus(): Record<string, number> {
-  const linhas = banco().prepare('SELECT status, COUNT(*) AS n FROM perguntas GROUP BY status').all() as any[];
-  const out: Record<string, number> = { pendente: 0, respondida: 0, fechada: 0 };
-  for (const l of linhas) out[l.status] = Number(l.n);
+  const linhas = banco()
+    .prepare(`SELECT CASE WHEN status = 'pendente' AND arquivada = 1 THEN 'arquivada' ELSE status END AS s, COUNT(*) AS n
+              FROM perguntas GROUP BY s`)
+    .all() as any[];
+  const out: Record<string, number> = { pendente: 0, respondida: 0, fechada: 0, arquivada: 0 };
+  for (const l of linhas) out[l.s] = Number(l.n);
   return out;
+}
+
+export function arquivarPergunta(id: number, arquivada: boolean): void {
+  banco().prepare('UPDATE perguntas SET arquivada = ?, atualizado_em = ? WHERE id = ?').run(arquivada ? 1 : 0, agora(), id);
+}
+
+/** Pendente criada há mais de N dias? (data do ML vem com fuso, por isso Date.parse) */
+export function ehAntiga(criadaEm: string | null, dias: number, agoraMs = Date.now()): boolean {
+  const t = criadaEm ? Date.parse(criadaEm) : NaN;
+  return Number.isFinite(t) && agoraMs - t > dias * 86_400_000;
+}
+
+/** Arquiva de uma vez as pendentes mais velhas que N dias. Devolve quantas. */
+export function arquivarAntigas(dias: number): number {
+  const linhas = banco().prepare(`SELECT id, criada_em FROM perguntas WHERE status = 'pendente' AND arquivada = 0`).all() as any[];
+  const ids = linhas.filter((l) => ehAntiga(l.criada_em, dias)).map((l) => Number(l.id));
+  const st = banco().prepare('UPDATE perguntas SET arquivada = 1, atualizado_em = ? WHERE id = ?');
+  for (const id of ids) st.run(agora(), id);
+  return ids.length;
 }
 
 /** Tempo até a resposta (minutos), nas respondidas dos últimos N dias. */

@@ -46,6 +46,8 @@ export const config = {
   sincronizarMinutos: numero(process.env.SINCRONIZAR_MINUTOS, 5),
   /** Teto de perguntas respondidas importadas do histórico. */
   historicoMax: numero(process.env.HISTORICO_MAX, 5000),
+  // Pendente mais velha que isso é "antiga": fica separada no painel e não gasta IA sozinha.
+  perguntaAntigaDias: numero(process.env.PERGUNTA_ANTIGA_DIAS, 30),
 
   // ---------- Texto das respostas ----------
   saudacao: process.env.RESPOSTA_SAUDACAO ?? 'Olá!',

@@ -66,6 +66,26 @@ describe('fluxo', () => {
     expect(p.sugestao).toContain('Temos 2 em estoque do Farol Gol G5.');
   });
 
+  it('pergunta antiga não gasta sugestão e pode ser arquivada (some da lista e do contador)', async () => {
+    criarRespostaPronta({ titulo: 'Estoque', gatilhos: ['estoque'], texto: 'Temos.' });
+    remoto.set('30', { ...pergunta('30', 'Tem estoque?'), criadaEm: new Date(Date.now() - 200 * 86400_000).toISOString() });
+    remoto.set('31', pergunta('31', 'Tem estoque?'));
+    await servico.sincronizarPendentes();
+    const velha = lerPerguntaExterna('mercadolivre', '30')!;
+    expect(velha.sugestao).toBeNull();
+    expect(velha.sugestaoMotivo).toMatch(/antiga/);
+    expect(lerPerguntaExterna('mercadolivre', '31')!.sugestaoOrigem).toBe('pronta');
+
+    const { arquivarAntigas, contarPorStatus } = await import('./perguntas');
+    expect(arquivarAntigas(30)).toBe(1);
+    expect(listarPerguntas({ status: 'pendente' }).map((p) => p.idExterno)).toEqual(['31']);
+    expect(listarPerguntas({ status: 'pendente', arquivadas: true }).map((p) => p.idExterno)).toEqual(['30']);
+    expect(contarPorStatus()).toMatchObject({ pendente: 1, arquivada: 1 });
+    // A sincronização seguinte não desarquiva.
+    await servico.sincronizarPendentes();
+    expect(contarPorStatus()).toMatchObject({ pendente: 1, arquivada: 1 });
+  });
+
   it('sem resposta pronta e sem IA, fica sem sugestão e explica o motivo', async () => {
     remoto.set('11', pergunta('11', 'Serve no Gol 2015?'));
     await servico.sincronizarPendentes();
