@@ -29,6 +29,7 @@ interface Linha {
   sugestao: string | null;
   sugestao_origem: string | null;
   avaliacao: string | null;
+  arquivada: number;
 }
 
 export interface NumerosDoPeriodo {
@@ -64,7 +65,7 @@ function lerLinhas(): Linha[] {
   const linhas = banco()
     .prepare(
       `SELECT p.item_id, pr.titulo, p.texto, p.criada_em, p.status, p.assunto, p.resposta, p.respondida_em,
-              p.respondida_por, p.sugestao, p.sugestao_origem, p.avaliacao
+              p.respondida_por, p.sugestao, p.sugestao_origem, p.avaliacao, p.arquivada
        FROM perguntas p LEFT JOIN produtos pr ON pr.plataforma = p.plataforma AND pr.item_id = p.item_id`,
     )
     .all() as any[];
@@ -142,7 +143,7 @@ export function visaoGeral(dias = 30, agoraMs = Date.now()): VisaoGeral {
   const atuais = todas.filter((l) => l.criada >= desde && l.criada <= agoraMs);
   const anteriores = todas.filter((l) => l.criada >= antesDe && l.criada < desde);
 
-  const pendentes = todas.filter((l) => l.status === 'pendente');
+  const pendentes = todas.filter((l) => l.status === 'pendente' && !l.arquivada);
   const maisAntiga = pendentes.reduce<number | null>((m, l) => (m == null || l.criada < m ? l.criada : m), null);
 
   // Uma barra por dia (até 90 dias; acima disso, por semana ficaria melhor, mas não é o caso ainda).

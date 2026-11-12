@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.9.0 (2026-11-12)
+
+- **Perguntas antigas separadas.** Em Pendentes, as abas "Recentes (até 30 dias)", "Antigas" e "Arquivadas". O contador do menu conta só as recentes, e a lista mostra as mais novas primeiro.
+- **Arquivar**: em cada pergunta, e "Arquivar as N antigas" de uma vez. Arquivada sai da lista do painel e dos números, mas continua sem resposta no ML; dá para desarquivar.
+- Pergunta com mais de 30 dias não ganha sugestão automática (não gasta IA); "Refazer sugestão" continua funcionando nela. Prazo configurável em `PERGUNTA_ANTIGA_DIAS`.
+
 ## 0.8.1 (2026-11-11)
 
 - "Virar resposta pronta" de compatibilidade, medidas, lado/kit ou instalação já vem com **Vale para** preenchido com o anúncio (o MLB onde a pergunta mais aparece), e o formulário mostra o nome do anúncio. Salvar um desses assuntos como "geral" pede confirmação.

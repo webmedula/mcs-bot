@@ -5,6 +5,7 @@ import { conector } from '../conectores';
 import { guardarTitulos } from '../conectores/mercadolivre/conector';
 import { logger } from '../logger';
 import {
+  ehAntiga,
   gravarAvaliacao,
   gravarSugestao,
   lerPergunta,
@@ -42,6 +43,14 @@ async function fichaSemErro(p: Pergunta): Promise<FichaDoProduto | null> {
 export async function processarPergunta(e: PerguntaExterna): Promise<Pergunta> {
   const { pergunta } = salvarPergunta(e);
   if (pergunta.status === 'pendente' && !pergunta.sugestaoEm) {
+    // Pergunta muito velha (de anúncio parado, por exemplo) não gasta IA sozinha.
+    if (ehAntiga(pergunta.criadaEm, config.perguntaAntigaDias)) {
+      gravarSugestao(pergunta.id, {
+        texto: null, origem: 'nenhuma', prontaId: null, confianca: null,
+        motivo: `Pergunta antiga (mais de ${config.perguntaAntigaDias} dias): sem sugestão automática. Use "Refazer sugestão" se quiser responder.`,
+      });
+      return lerPergunta(pergunta.id)!;
+    }
     const ficha = await fichaSemErro(pergunta);
     await gerarSugestao(pergunta.id, ficha);
   }

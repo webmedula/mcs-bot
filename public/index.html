@@ -208,7 +208,7 @@ async function entrar(ev) {
 
 async function carregarEstado() {
   estado = await api('/api/painel/estado');
-  const n = estado.perguntas.pendente || 0;
+  const n = estado.pendentesRecentes ?? estado.perguntas.pendente ?? 0;
   $('#n-pendentes').innerHTML = n ? `<span class="contador">${n}</span>` : '';
   $('#rodape-versao').textContent = `v${estado.versao}`;
   const ml = estado.mercadoLivre;
@@ -394,8 +394,30 @@ function classeOrigem(p) {
   if (p.sugestaoOrigem === 'ia' && p.sugestao) return 'ia';
   return 'humano';
 }
+let vistaPend = 'recentes';
+function mudarVistaPend(v) { vistaPend = v; filtroAssunto = ''; mostrar('pendentes', true); }
+async function arquivar(id, arquivada, btn) {
+  await ocupado(btn, '…', async () => {
+    try { await api(`/api/perguntas/${id}/arquivar`, { metodo: 'POST', corpo: { arquivada } }); toast(arquivada ? 'Arquivada. Ela sai da lista (continua sem resposta no ML).' : 'Voltou para a lista.'); await mostrar('pendentes', true); }
+    catch (e) { toast(e.message); }
+  });
+}
+async function arquivarAntigas(btn, n) {
+  if (!confirm(`Arquivar as ${n} perguntas com mais de ${estado.perguntaAntigaDias} dias? Elas saem da lista do painel, mas continuam sem resposta no Mercado Livre. Dá para desarquivar depois.`)) return;
+  await ocupado(btn, 'Arquivando…', async () => {
+    try { const r = await api('/api/perguntas/arquivar-antigas', { metodo: 'POST' }); toast(`${r.arquivadas} pergunta(s) arquivada(s).`); vistaPend = 'recentes'; await mostrar('pendentes', true); }
+    catch (e) { toast(e.message); }
+  });
+}
 async function telaPendentes() {
-  const todas = await api('/api/perguntas?status=pendente&limite=200');
+  const dias = estado.perguntaAntigaDias || 30;
+  const limite = Date.now() - dias * 86400000;
+  const naoArquivadas = await api('/api/perguntas?status=pendente&limite=500');
+  const recentes = naoArquivadas.filter((p) => !p.criadaEm || Date.parse(p.criadaEm) >= limite);
+  const antigas = naoArquivadas.filter((p) => p.criadaEm && Date.parse(p.criadaEm) < limite);
+  const nArq = estado.perguntas.arquivada || 0;
+  if (vistaPend === 'arquivadas' && !nArq) vistaPend = 'recentes';
+  const todas = vistaPend === 'arquivadas' ? await api('/api/perguntas?status=pendente&arquivadas=1&limite=500') : vistaPend === 'antigas' ? antigas : recentes;
   const envio = estado.mercadoLivre.envioHabilitado;
   let h = avisosGerais();
   const maisAntiga = todas.reduce((m, p) => (!m || p.criadaEm < m ? p.criadaEm : m), null);
@@ -411,12 +433,21 @@ async function telaPendentes() {
   for (const p of todas) porAssunto[p.assunto] = (porAssunto[p.assunto] || 0) + 1;
   if (filtroAssunto && !porAssunto[filtroAssunto]) filtroAssunto = '';
   const lista = filtroAssunto ? todas.filter((p) => p.assunto === filtroAssunto) : todas;
+  h += `<div class="filtros" style="margin-bottom:8px">
+    <button class="${vistaPend === 'recentes' ? 'ativo' : ''}" onclick="mudarVistaPend('recentes')">Recentes, até ${dias} dias (${recentes.length})</button>
+    ${antigas.length ? `<button class="${vistaPend === 'antigas' ? 'ativo' : ''}" onclick="mudarVistaPend('antigas')">Antigas (${antigas.length})</button>` : ''}
+    ${nArq ? `<button class="${vistaPend === 'arquivadas' ? 'ativo' : ''}" onclick="mudarVistaPend('arquivadas')">Arquivadas (${nArq})</button>` : ''}
+  </div>`;
+  if (vistaPend === 'antigas' && antigas.length) {
+    h += `<div class="aviso amarelo">Perguntas com mais de ${dias} dias, muitas de anúncios parados. Elas não ganham sugestão automática (para não gastar IA). Responda as que valerem a pena, ou tire todas da lista:
+      <button class="acao" style="margin-left:8px" onclick="arquivarAntigas(this, ${antigas.length})">Arquivar as ${antigas.length} antigas</button></div>`;
+  }
   h += `<div class="cartao"><div class="linha entre"><div>
-      <b>${lista.length} pergunta(s) esperando resposta</b>
+      <b>${lista.length} pergunta(s) ${vistaPend === 'arquivadas' ? 'arquivada(s)' : vistaPend === 'antigas' ? 'antiga(s)' : 'esperando resposta'}</b>
       <p class="explica" style="margin:4px 0 0">Cada pergunta já vem com uma sugestão: uma resposta pronta, quando alguma casa, ou a IA usando a ficha do anúncio.
       ${envio ? 'Revise e clique em Enviar.' : '<b>O envio está desligado</b> (o Gobots ainda responde): por enquanto o sistema só sugere, para compararmos.'}</p>
     </div><button class="acao" onclick="sincronizar(this)">Buscar agora</button></div></div>`;
-  if (!todas.length) return h + `<div class="vazio"><b>Tudo respondido</b>Nenhuma pergunta esperando. O sistema busca novas a cada poucos minutos.</div>`;
+  if (!todas.length) return h + `<div class="vazio"><b>Tudo respondido</b>Nenhuma pergunta recente esperando. O sistema busca novas a cada poucos minutos.${antigas.length ? ` Há ${antigas.length} antiga(s) na aba "Antigas".` : ''}</div>`;
   const chaves = Object.keys(porAssunto);
   if (chaves.length > 1) {
     h += `<div class="filtros"><button class="${filtroAssunto ? '' : 'ativo'}" onclick="filtrarAssunto('')">Todas (${todas.length})</button>`;
@@ -440,6 +471,7 @@ async function telaPendentes() {
         <button class="acao" onclick="refazer(${p.id}, this)">Refazer sugestão</button>
         <button class="acao" onclick="abrirEnsinar(${p.id})">Ensinar ao bot</button>
         <button class="acao" onclick="novaProntaDe(${esc(JSON.stringify({ texto: p.texto, resposta: p.sugestao || "", assunto: p.assunto, itemId: p.itemId, itemTitulo: p.itemTitulo }))})">Virar resposta pronta</button>
+        <button class="acao" onclick="arquivar(${p.id}, ${!p.arquivada}, this)">${p.arquivada ? 'Desarquivar' : 'Arquivar'}</button>
       </div>
       ${blocoEnsinar(p.id, 'Corrija o texto da resposta acima e guarde. O bot passa a usar essa correção como exemplo em perguntas parecidas.')}
       </div>`;

@@ -118,7 +118,7 @@ describe('perguntas no banco', () => {
     expect(depois.status).toBe('respondida');
     expect(depois.respondidaPor).toBe('externo');
     expect(depois.resposta).toBe('Sim!');
-    expect(contarPorStatus()).toEqual({ pendente: 0, respondida: 1, fechada: 0 });
+    expect(contarPorStatus()).toEqual({ pendente: 0, respondida: 1, fechada: 0, arquivada: 0 });
   });
 });
 
