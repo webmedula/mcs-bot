@@ -1,5 +1,5 @@
 import { conhecerComprador } from './comprador';
-import { atualizarCorrecao, correcaoDaPergunta, ehCorrecao, salvarCorrecao } from './correcoes';
+import { atualizarCorrecao, correcaoDaPergunta, ehCorrecao, salvarCorrecao, type EscopoCorrecao } from './correcoes';
 import { banco, gravarEstado, lerEstado, agora } from '../banco';
 import { config } from '../config';
 import { conector } from '../conectores';
@@ -9,6 +9,7 @@ import {
   ehAntiga,
   gravarAvaliacao,
   gravarSugestao,
+  gravarVoto,
   lerPergunta,
   lerPerguntaExterna,
   listarPerguntas,
@@ -294,12 +295,12 @@ export function reaplicarRespostasProntas(): number {
  * a corrigida (pronta para copiar ou enviar). Na aba Respondidas, ensina com o que foi respondido
  * (por exemplo, quando a resposta do Gobots era melhor que a nossa).
  */
-export function ensinarResposta(id: number, dados: { texto?: string; licao?: string | null }) {
+export function ensinarResposta(id: number, dados: { texto?: string; licao?: string | null; escopo?: EscopoCorrecao }) {
   const p = lerPergunta(id);
   if (!p) throw new Error('Pergunta não encontrada.');
   const origem = p.status === 'pendente' ? 'ensinar' : 'gobots';
   const texto = (dados.texto ?? (origem === 'gobots' ? p.resposta : '') ?? '').trim();
-  const c = salvarCorrecao(p, texto, origem, dados.licao);
+  const c = salvarCorrecao(p, texto, origem, dados.licao, dados.escopo);
   if (p.status === 'pendente') {
     gravarSugestao(id, { texto, origem: 'ia', prontaId: null, confianca: 1, motivo: 'Corrigida pela equipe (o bot guardou para as próximas).' });
   }
@@ -311,18 +312,34 @@ export function ensinarResposta(id: number, dados: { texto?: string; licao?: str
  * Aba Respondidas: a pessoa escolhe qual resposta era melhor. "Gobots" ensina o bot com a resposta
  * dada; "bot" ou "iguais" só contam para o placar (e desfazem um "Gobots" escolhido antes).
  */
-export function avaliarResposta(id: number, melhor: 'gobots' | 'bot' | 'iguais', licao?: string | null) {
+export function avaliarResposta(
+  id: number, melhor: 'gobots' | 'bot' | 'iguais', licao?: string | null, extra: { texto?: string; escopo?: EscopoCorrecao } = {},
+) {
   const p = lerPergunta(id);
   if (!p) throw new Error('Pergunta não encontrada.');
   if (p.status !== 'respondida') throw new Error('Só dá para avaliar perguntas já respondidas.');
   if (!['gobots', 'bot', 'iguais'].includes(melhor)) throw new Error('Escolha gobots, bot ou iguais.');
   if (melhor === 'gobots') {
     if (!p.resposta) throw new Error('Essa pergunta não tem resposta registrada para ensinar.');
-    salvarCorrecao(p, p.resposta, 'gobots', licao);
+    // No painel de treino dá para ajustar o texto antes de guardar.
+    salvarCorrecao(p, extra.texto?.trim() || p.resposta, 'gobots', licao, extra.escopo);
   } else {
     const c = correcaoDaPergunta(id);
     if (c && c.origem === 'gobots') atualizarCorrecao(c.id, { ativa: false });
   }
   gravarAvaliacao(id, melhor);
+  return lerPergunta(id)!;
+}
+
+/**
+ * Joinha na sugestão. "ruim" não apaga nada: só marca (o painel abre o treino para escrever a certa).
+ * Clicar de novo no mesmo voto tira o voto.
+ */
+export function votarSugestao(id: number, voto: 'bom' | 'ruim' | null): Pergunta {
+  const p = lerPergunta(id);
+  if (!p) throw new Error('Pergunta não encontrada.');
+  if (voto !== null && voto !== 'bom' && voto !== 'ruim') throw new Error('Voto inválido.');
+  if (voto && !p.sugestao) throw new Error('Essa pergunta não tem sugestão para avaliar.');
+  gravarVoto(id, voto);
   return lerPergunta(id)!;
 }

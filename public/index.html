@@ -121,15 +121,38 @@
   .ranking .nome { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
   @media (max-width: 860px) { .vg-grade { grid-template-columns: 1fr 1fr; } }
   @media (max-width: 520px) { .vg-grade { grid-template-columns: 1fr; } }
-  .ensinar { display: none; margin-top: 10px; padding: 12px; border-radius: 10px; background: var(--azul-claro); }
-  .ensinar.aberto { display: block; }
-  .ensinar p { margin: 0 0 8px; font-size: 13px; color: var(--azul); }
   .mem-item { display: grid; gap: 6px; }
   .mem-item.inativa { opacity: .6; }
   .mem-par { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
   @media (max-width: 760px) { .mem-par { grid-template-columns: 1fr; } }
   @media (max-width: 1360px) { .marca span { display: none; } }
-  #toast { position: fixed; bottom: 18px; left: 50%; transform: translateX(-50%); background: var(--topo); color: #fff; padding: 10px 16px; border-radius: 10px; display: none; z-index: 10; max-width: 90vw; box-shadow: 0 8px 24px rgba(0,0,0,.2); }
+  .gaveta-fundo { position: fixed; inset: 0; background: rgba(16,24,40,.45); opacity: 0; pointer-events: none; transition: opacity .2s ease; z-index: 20; }
+  .gaveta-fundo.aberta { opacity: 1; pointer-events: auto; }
+  .gaveta { position: fixed; top: 0; right: 0; bottom: 0; width: min(540px, 100vw); background: var(--cartao); box-shadow: -8px 0 32px rgba(16,24,40,.18); transform: translateX(100%); visibility: hidden; transition: transform .22s ease, visibility .22s; z-index: 21; display: flex; flex-direction: column; }
+  .gaveta.aberta { transform: none; visibility: visible; }
+  .gaveta-topo { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 14px 18px; border-bottom: 1px solid var(--borda); }
+  .gaveta-topo h2 { margin: 0; font-size: 18px; }
+  .gaveta-topo button { background: none; border: 0; font-size: 26px; line-height: 1; cursor: pointer; color: var(--suave); width: 44px; height: 44px; border-radius: 8px; }
+  .gaveta-topo button:hover { background: var(--fundo); color: var(--texto); }
+  .gaveta-corpo { flex: 1; overflow-y: auto; padding: 14px 18px; }
+  .gaveta-pe { padding: 12px 18px; border-top: 1px solid var(--borda); display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+  .gaveta-pe .suave { flex: 1; min-width: 140px; }
+  .gv-bloco { border: 1px solid var(--borda); border-radius: 10px; padding: 10px 12px; margin-bottom: 12px; }
+  .gv-bloco h3 { margin: 0 0 6px; font-size: 12px; text-transform: uppercase; letter-spacing: .4px; color: var(--suave); }
+  .gv-bloco .caixa { margin-top: 4px; font-size: 14px; }
+  .opcao { display: flex; gap: 10px; align-items: flex-start; border: 1px solid var(--borda); border-radius: 8px; padding: 10px 12px; margin: 0 0 6px; cursor: pointer; color: var(--texto); font-size: 14px; }
+  .opcao input { width: auto; margin-top: 3px; accent-color: var(--marca-escura); }
+  .opcao:has(input:checked) { border-color: var(--marca-escura); background: var(--marca-clara); }
+  .opcao:has(input:disabled) { opacity: .55; cursor: not-allowed; }
+  .opcao small { display: block; color: var(--suave); }
+  .joinhas { display: inline-flex; gap: 4px; margin-left: auto; }
+  .joinha { font: inherit; font-size: 16px; line-height: 1; width: 36px; height: 32px; border-radius: 8px; border: 1px solid var(--borda); background: #fff; cursor: pointer; filter: grayscale(1); opacity: .7; }
+  .joinha:hover { opacity: 1; border-color: #c8ccd3; }
+  .joinha.sel { filter: none; opacity: 1; }
+  .joinha.bom.sel { background: var(--verde-claro); border-color: var(--verde); }
+  .joinha.ruim.sel { background: var(--vermelho-claro); border-color: var(--vermelho); }
+  @media (max-width: 760px) { .joinha { width: 44px; height: 44px; } }
+  #toast { position: fixed; bottom: 18px; left: 50%; transform: translateX(-50%); background: var(--topo); color: #fff; padding: 10px 16px; border-radius: 10px; display: none; z-index: 30; max-width: 90vw; box-shadow: 0 8px 24px rgba(0,0,0,.2); }
 </style>
 <link rel="icon" type="image/png" href="/favicon.png">
 </head>
@@ -161,6 +184,14 @@
   </header>
   <main id="conteudo"></main>
 </div>
+<div class="gaveta-fundo" id="gaveta-fundo" onclick="fecharTreino()"></div>
+<aside class="gaveta" id="gaveta" role="dialog" aria-modal="true" aria-labelledby="gaveta-titulo" aria-hidden="true">
+  <div class="gaveta-topo"><h2 id="gaveta-titulo">Treinar resposta</h2><button onclick="fecharTreino()" aria-label="Fechar">×</button></div>
+  <div class="gaveta-corpo" id="gaveta-corpo"></div>
+  <div class="gaveta-pe"><span class="suave">O bot usa isso nas próximas perguntas.</span>
+    <button class="acao" onclick="fecharTreino()">Cancelar</button>
+    <button class="acao principal" id="gaveta-confirmar" onclick="confirmarTreino(this)">Confirmar</button></div>
+</aside>
 <div id="toast" role="status" aria-live="polite"></div>
 
 <script>
@@ -466,7 +497,7 @@ async function telaPendentes() {
   }
   h += `<div class="cartao"><div class="linha entre"><div>
       <b>${lista.length} pergunta(s) ${vistaPend === 'arquivadas' ? 'arquivada(s)' : vistaPend === 'fora-do-ar' ? 'fora do ar' : vistaPend === 'antigas' ? 'antiga(s)' : 'esperando resposta'}</b>
-      <p class="explica" style="margin:4px 0 0">Cada pergunta já vem com uma sugestão: uma resposta pronta, quando alguma casa, ou a IA usando a ficha do anúncio.
+      <p class="explica" style="margin:4px 0 0">Cada pergunta já vem com uma sugestão: uma resposta pronta, quando alguma casa, ou a IA usando a ficha do anúncio. Marque 👍 se a sugestão está boa ou 👎 para escrever a resposta certa e ensinar o bot.
       ${envio ? 'Revise e clique em Enviar.' : '<b>O envio está desligado</b> (o Gobots ainda responde): por enquanto o sistema só sugere, para compararmos.'}</p>
     </div><button class="acao" onclick="sincronizar(this)">Buscar agora</button></div></div>`;
   if (!todas.length) return h + `<div class="vazio"><b>Tudo respondido</b>Nenhuma pergunta recente esperando. O sistema busca novas a cada poucos minutos.${antigas.length ? ` Há ${antigas.length} antiga(s) na aba "Antigas".` : ''}${foraDoAr.length ? ` Há ${foraDoAr.length} com anúncio fora do ar na aba "Anúncio fora do ar".` : ''}</div>`;
@@ -479,11 +510,14 @@ async function telaPendentes() {
     }
     h += '</div>';
   }
+  const v = estado.votos || { bom: 0, ruim: 0 };
+  if (v.bom + v.ruim) h += `<p class="suave" style="margin:0 0 10px">Sugestões avaliadas: <b>${v.bom}</b> boas · <b>${v.ruim}</b> ruins (${Math.round((v.bom / (v.bom + v.ruim)) * 100)}% boas).</p>`;
   for (const p of lista) {
+    naTela[p.id] = p;
     h += `<div class="cartao card-pergunta ${classeOrigem(p)}" id="p-${p.id}">
       <div class="linha entre"><span class="suave">${linkAnuncio(p)}</span><span class="suave">${quemPerguntou(p)}${haQuanto(p.criadaEm)}</span></div>
       <div class="pergunta">${esc(p.texto)}</div>
-      <div class="linha"><span class="etiqueta">${esc(p.assuntoNome)}</span>${etiquetaOrigem(p)}<span class="suave">${esc(p.sugestaoMotivo || '')}</span></div>
+      <div class="linha"><span class="etiqueta">${esc(p.assuntoNome)}</span>${etiquetaOrigem(p)}<span class="suave">${esc(p.sugestaoMotivo || '')}</span>${joinhas(p)}</div>
       <label for="t-${p.id}">Resposta</label>
       <textarea id="t-${p.id}" maxlength="2000" oninput="contar(this)">${esc(p.sugestao || '')}</textarea>
       <div class="contagem" data-para="t-${p.id}">${(p.sugestao || '').length}/2000</div>
@@ -491,11 +525,9 @@ async function telaPendentes() {
         <button class="acao principal" onclick="enviar(${p.id}, this)" ${envio ? '' : 'disabled title="Envio desligado (ML_ENVIO_HABILITADO)"'}>Enviar ao Mercado Livre</button>
         ${envio ? '' : `<button class="acao" onclick="copiar(${p.id})">Copiar resposta</button>`}
         <button class="acao" onclick="refazer(${p.id}, this)">Refazer sugestão</button>
-        <button class="acao" onclick="abrirEnsinar(${p.id})">Ensinar ao bot</button>
-        <button class="acao" onclick="novaProntaDe(${esc(JSON.stringify({ texto: p.texto, resposta: p.sugestao || "", assunto: p.assunto, itemId: p.itemId, itemTitulo: p.itemTitulo }))})">Virar resposta pronta</button>
+        <button class="acao" onclick="abrirTreino({ modo: 'pendente', id: ${p.id} })">Treinar resposta</button>
         <button class="acao" onclick="arquivar(${p.id}, ${!p.arquivada}, this)">${p.arquivada ? 'Desarquivar' : 'Arquivar'}</button>
       </div>
-      ${blocoEnsinar(p.id, 'Corrija o texto da resposta acima e guarde. O bot passa a usar essa correção como exemplo em perguntas parecidas.')}
       </div>`;
   }
   return h;
@@ -527,18 +559,6 @@ async function enviar(id, btn) {
 
 // ---------------- Frequentes ----------------
 const grupoFreq = {};
-async function ensinarGrupo(k, btn) {
-  const g = grupoFreq[k];
-  const resposta = $(`#fq-${k}`).value.trim();
-  if (!resposta) return toast('Escreva a resposta certa antes de ensinar.');
-  await ocupado(btn, 'Guardando…', async () => {
-    try {
-      await api('/api/correcoes', { metodo: 'POST', corpo: { pergunta: g.pergunta, resposta, licao: $(`#fql-${k}`).value, assunto: g.assunto } });
-      toast('Guardado na memória. O bot vai responder assim nas perguntas parecidas.');
-      await mostrar('frequentes', true);
-    } catch (e) { toast(e.message); }
-  });
-}
 function prontaDoGrupo(k) {
   const g = grupoFreq[k];
   novaProntaDe({ texto: g.pergunta, resposta: $(`#fq-${k}`).value, assunto: g.assunto, gatilho: g.gatilho, itemId: g.itemId, itemTitulo: g.itemTitulo });
@@ -575,7 +595,7 @@ async function telaFrequentes() {
         <textarea id="fq-${k}" maxlength="2000" placeholder="Escreva como a loja deve responder esse tipo de pergunta">${esc(g.respostaMaisUsada || '')}</textarea>
         <input id="fql-${k}" maxlength="500" style="margin-top:6px" placeholder="Por quê? (opcional: vira uma regra que o bot segue sempre)">
         <div class="linha" style="margin-top:8px">
-          <button class="acao principal" onclick="ensinarGrupo('${k}', this)">Ensinar ao bot</button>
+          <button class="acao principal" onclick="abrirTreino({ modo: 'grupo', k: '${k}' })">Ensinar ao bot</button>
           <button class="acao" onclick="prontaDoGrupo('${k}')">Virar resposta pronta</button></div>
       </div>`;
     });
@@ -722,6 +742,7 @@ async function telaComparar() {
   for (const p of lista) {
     const quem = { externo: 'Gobots / fora do sistema', painel: 'pelo painel', 'mcs-bot': 'automático' }[p.respondidaPor] || p.respondidaPor;
     const sel = (v) => (p.avaliacao === v ? ' principal' : '');
+    naTela[p.id] = p;
     h += `<div class="cartao" id="av-${p.id}"><div class="linha entre"><span class="suave">${linkAnuncio(p)}</span><span class="suave">${dataBr(p.criadaEm)}</span></div>
       <div class="pergunta">${esc(p.texto)}</div>
       <div class="grade2">
@@ -729,14 +750,9 @@ async function telaComparar() {
         <div><div class="suave">Sugestão do bot ${etiquetaOrigem(p)}</div><div class="caixa">${esc(p.sugestao || p.sugestaoMotivo || '')}</div></div>
       </div>
       <div class="linha" style="margin-top:8px"><span class="suave">Qual é melhor?</span>
-        <button class="acao${sel('gobots')}" onclick="abrirEnsinar(${p.id})" ${p.resposta ? '' : 'disabled'}>A do Gobots (ensinar ao bot)</button>
+        <button class="acao${sel('gobots')}" onclick="abrirTreino({ modo: 'respondida', id: ${p.id} })" ${p.resposta ? '' : 'disabled'}>A do Gobots (ensinar ao bot)</button>
         <button class="acao${sel('iguais')}" onclick="avaliar(${p.id}, 'iguais', this)">Iguais</button>
         <button class="acao${sel('bot')}" onclick="avaliar(${p.id}, 'bot', this)">A do bot</button></div>
-      <div class="ensinar" id="ens-${p.id}"><p>O bot guarda a resposta do Gobots como a certa para perguntas parecidas.</p>
-        <label for="lic-${p.id}" style="margin-top:0">Por quê? (opcional: vira uma regra que o bot segue em todas as perguntas)</label>
-        <input id="lic-${p.id}" maxlength="500" placeholder="Ex.: aviso de pagamento não é pergunta: só agradecer a compra">
-        <div class="linha" style="margin-top:8px"><button class="acao principal" onclick="avaliar(${p.id}, 'gobots', this)">Guardar na memória</button>
-        <button class="acao" onclick="abrirEnsinar(${p.id})">Cancelar</button></div></div>
       </div>`;
   }
   return h;
@@ -751,22 +767,109 @@ async function avaliar(id, melhor, btn) {
     } catch (e) { toast(e.message); }
   });
 }
-// ---------------- Ensinar / Memória ----------------
-function blocoEnsinar(id, explica) {
-  return `<div class="ensinar" id="ens-${id}"><p>${esc(explica)}</p>
-    <label for="lic-${id}" style="margin-top:0">Por quê? (opcional: vira uma regra que o bot segue em todas as perguntas)</label>
-    <input id="lic-${id}" maxlength="500" placeholder="Ex.: não confirmamos compatibilidade só pelo modelo, precisa do ano">
-    <div class="linha" style="margin-top:8px"><button class="acao principal" onclick="ensinar(${id}, this)">Guardar na memória</button>
-    <button class="acao" onclick="abrirEnsinar(${id})">Cancelar</button></div></div>`;
+// ---------------- Treinar resposta (painel lateral) / Memória ----------------
+/** Perguntas que estão na tela, por id (o painel lateral lê daqui). */
+const naTela = {};
+let treino = null;
+const NOMES_ESCOPO = { geral: 'qualquer pergunta do tema', anuncio: 'só este anúncio', produto: 'este produto (SKU)' };
+
+function joinhas(p) {
+  if (!p.sugestao) return '';
+  const b = (v, emoji, rotulo) => `<button class="joinha ${v} ${p.sugestaoVoto === v ? 'sel' : ''}" data-voto="${v}" aria-pressed="${p.sugestaoVoto === v}" aria-label="${rotulo}" title="${rotulo}" onclick="votar(${p.id}, '${v}')">${emoji}</button>`;
+  return `<span class="joinhas" id="jo-${p.id}">${b('bom', '👍', 'A sugestão está boa')}${b('ruim', '👎', 'A sugestão está ruim: escrever a certa')}</span>`;
 }
-function abrirEnsinar(id) { const e = $(`#ens-${id}`); e.classList.toggle('aberto'); if (e.classList.contains('aberto')) $(`#lic-${id}`).focus(); }
-async function ensinar(id, btn) {
-  const t = $(`#t-${id}`);
-  const corpo = { licao: $(`#lic-${id}`).value };
-  if (t) { corpo.texto = t.value.trim(); if (!corpo.texto) return toast('Escreva a resposta certa antes de guardar.'); }
+async function votar(id, voto) {
+  const p = naTela[id];
+  const novo = p.sugestaoVoto === voto ? null : voto;
+  try {
+    await api(`/api/perguntas/${id}/voto`, { metodo: 'POST', corpo: { voto: novo } });
+    p.sugestaoVoto = novo;
+    document.querySelectorAll(`#jo-${id} .joinha`).forEach((b) => {
+      const sel = b.dataset.voto === novo;
+      b.classList.toggle('sel', sel);
+      b.setAttribute('aria-pressed', String(sel));
+    });
+    if (novo === 'ruim') abrirTreino({ modo: 'pendente', id });
+    else if (novo === 'bom') toast('Marcada como boa.');
+  } catch (e) { toast(e.message); }
+}
+
+/**
+ * Abre o painel lateral. modo: 'pendente' (corrige a sugestão), 'respondida' (a resposta dada era a
+ * melhor) ou 'grupo' (grupo de perguntas frequentes).
+ */
+function abrirTreino(ctx) {
+  let d;
+  if (ctx.modo === 'grupo') {
+    const g = grupoFreq[ctx.k];
+    d = { pergunta: g.pergunta, assunto: g.assunto, itemId: g.itemId, itemTitulo: g.itemTitulo, sku: null, gatilho: g.gatilho,
+      inicial: $(`#fq-${ctx.k}`).value, licao: $(`#fql-${ctx.k}`).value, dada: null, sugestao: null };
+  } else {
+    const p = naTela[ctx.id];
+    const campo = $(`#t-${ctx.id}`);
+    d = { pergunta: p.texto, assunto: p.assunto, itemId: p.itemId, itemTitulo: p.itemTitulo, permalink: p.permalink, sku: p.itemSku, licao: '',
+      inicial: ctx.modo === 'pendente' ? (campo ? campo.value : p.sugestao || '') : p.resposta || '',
+      dada: ctx.modo === 'respondida' ? p.resposta : null, sugestao: p.sugestao };
+  }
+  treino = { ...ctx, d, foco: document.activeElement };
+  const padrao = ASSUNTOS_DO_PRODUTO.includes(d.assunto) && d.itemId ? 'anuncio' : 'geral';
+  const opcao = (v, titulo, sub, desligada) => `<label class="opcao"><input type="radio" name="tr-escopo" value="${v}" ${padrao === v ? 'checked' : ''} ${desligada ? 'disabled' : ''}><span>${titulo}<small>${sub}</small></span></label>`;
+  const titulo = d.itemTitulo || d.itemId;
+  $('#gaveta-corpo').innerHTML = `
+    <div class="gv-bloco"><h3>Anúncio</h3>
+      ${d.itemId ? `<div>${d.permalink ? `<a href="${esc(d.permalink)}" target="_blank" rel="noopener">${esc(titulo)}</a>` : esc(titulo)}</div>
+        <div class="suave">ID: ${esc(d.itemId)}${d.sku ? ` · SKU: ${esc(d.sku)}` : ''}</div>` : '<div class="suave">Sem anúncio ligado a esta pergunta.</div>'}</div>
+    <div class="gv-bloco"><h3>Pergunta</h3><div>${esc(d.pergunta)}</div>
+      ${d.dada ? `<div class="suave" style="margin-top:8px">Resposta dada</div><div class="caixa">${esc(d.dada)}</div>` : ''}
+      ${d.sugestao ? `<div class="suave" style="margin-top:8px">Sugestão do bot</div><div class="caixa">${esc(d.sugestao)}</div>` : ''}</div>
+    <label for="tr-resposta" style="margin-top:0">Resposta certa</label>
+    <textarea id="tr-resposta" maxlength="2000" style="min-height:120px" placeholder="Escreva como a loja deve responder">${esc(d.inicial)}</textarea>
+    <label>Vale para</label>
+    <div role="radiogroup" aria-label="Vale para">
+      ${opcao('anuncio', 'Só este anúncio', 'Para o que depende da peça: medida, lado, compatibilidade.', !d.itemId)}
+      ${opcao('produto', 'Este produto, em qualquer anúncio', d.sku ? `Todos os anúncios com o SKU ${esc(d.sku)}.` : 'Precisa do SKU do anúncio, que ainda não foi lido.', !d.sku)}
+      ${opcao('geral', 'Qualquer pergunta sobre este tema', 'Para regras da loja: entrega, nota fiscal, garantia, troca.', false)}
+    </div>
+    <label for="tr-licao">O que o bot aprende (opcional)</label>
+    <input id="tr-licao" maxlength="500" value="${esc(d.licao)}" placeholder="Ex.: quem faz a entrega é o Mercado Livre">
+    <p class="suave" style="margin:6px 0 0">Uma frase curta com a regra. O bot segue nas perguntas para as quais a correção vale.</p>
+    <p class="suave" style="margin:14px 0 0">Prefere uma resposta fixa, sem IA? <a href="#" onclick="prontaDoTreino(); return false">Virar resposta pronta</a></p>`;
+  $('#gaveta').classList.add('aberta');
+  $('#gaveta-fundo').classList.add('aberta');
+  $('#gaveta').setAttribute('aria-hidden', 'false');
+  setTimeout(() => $('#tr-resposta').focus(), 60);
+}
+function fecharTreino() {
+  if (!treino) return;
+  $('#gaveta').classList.remove('aberta');
+  $('#gaveta-fundo').classList.remove('aberta');
+  $('#gaveta').setAttribute('aria-hidden', 'true');
+  const foco = treino.foco;
+  treino = null;
+  if (foco && document.contains(foco)) foco.focus();
+}
+document.addEventListener('keydown', (ev) => { if (ev.key === 'Escape' && treino) fecharTreino(); });
+function prontaDoTreino() {
+  const d = treino.d;
+  const resposta = $('#tr-resposta').value;
+  fecharTreino();
+  novaProntaDe({ texto: d.pergunta, resposta, assunto: d.assunto, gatilho: d.gatilho, itemId: d.itemId, itemTitulo: d.itemTitulo });
+}
+async function confirmarTreino(btn) {
+  const texto = $('#tr-resposta').value.trim();
+  if (!texto) return toast('Escreva a resposta certa antes de confirmar.');
+  const escopo = (document.querySelector('input[name="tr-escopo"]:checked') || {}).value || 'geral';
+  const licao = $('#tr-licao').value;
+  const t = treino;
   await ocupado(btn, 'Guardando…', async () => {
-    try { await api(`/api/perguntas/${id}/ensinar`, { metodo: 'POST', corpo }); toast('Guardado. O bot vai usar isso nas próximas perguntas parecidas.'); await mostrar(aba, true); }
-    catch (e) { toast(e.message); }
+    try {
+      if (t.modo === 'grupo') await api('/api/correcoes', { metodo: 'POST', corpo: { pergunta: t.d.pergunta, resposta: texto, licao, assunto: t.d.assunto, itemId: t.d.itemId, escopo } });
+      else if (t.modo === 'respondida') await api(`/api/perguntas/${t.id}/avaliar`, { metodo: 'POST', corpo: { melhor: 'gobots', texto, licao, escopo } });
+      else await api(`/api/perguntas/${t.id}/ensinar`, { metodo: 'POST', corpo: { texto, licao, escopo } });
+      fecharTreino();
+      toast(`Guardado na memória (vale para ${NOMES_ESCOPO[escopo]}).`);
+      await mostrar(aba, true);
+    } catch (e) { toast(e.message); }
   });
 }
 async function telaMemoria() {
@@ -774,10 +877,10 @@ async function telaMemoria() {
   const ativas = lista.filter((c) => c.ativa).length;
   const licoes = lista.filter((c) => c.ativa && c.licao).length;
   let h = `<div class="cartao"><b>O que o bot aprendeu</b>
-    <p class="explica" style="margin:4px 0 0">Cada vez que alguém corrige uma sugestão, a resposta certa fica guardada aqui. Antes de responder, a IA lê as correções de perguntas parecidas e todas as lições. Correção de outro anúncio ensina a política e o jeito de responder, não os dados do produto.</p>
-    <p class="suave" style="margin:8px 0 0">Entra na memória quando você: clica em <b>Ensinar ao bot</b> numa pendente; envia pelo painel uma resposta bem diferente da sugestão; ou escolhe na aba <b>Respondidas</b> que a resposta do Gobots era melhor.</p>
+    <p class="explica" style="margin:4px 0 0">Cada vez que alguém corrige uma sugestão, a resposta certa fica guardada aqui. Antes de responder, a IA lê as correções e lições que valem para a pergunta. Em cada uma você escolhe o alcance: só o anúncio, o produto (mesmo SKU) ou qualquer pergunta do tema. Correção de outro anúncio ensina a política e o jeito de responder, não os dados do produto.</p>
+    <p class="suave" style="margin:8px 0 0">Entra na memória quando você: clica em <b>Treinar resposta</b> (ou no 👎) numa pendente; envia pelo painel uma resposta bem diferente da sugestão; ou escolhe na aba <b>Respondidas</b> que a resposta do Gobots era melhor.</p>
     <p style="margin:8px 0 0"><b>${ativas}</b> correção(ões) ativa(s), <b>${licoes}</b> com lição.</p></div>`;
-  if (!lista.length) return h + '<div class="vazio"><b>Memória vazia</b>Corrija uma sugestão em Pendentes ou em Respondidas e clique em "Ensinar ao bot".</div>';
+  if (!lista.length) return h + '<div class="vazio"><b>Memória vazia</b>Em Pendentes, clique em "Treinar resposta" numa pergunta e confirme a resposta certa.</div>';
   const origens = { ensinar: 'ensinada no painel', envio: 'enviada pelo painel', gobots: 'resposta do Gobots', frequentes: 'perguntas frequentes' };
   for (const c of lista) {
     h += `<div class="cartao mem-item ${c.ativa ? '' : 'inativa'}">
@@ -788,7 +891,13 @@ async function telaMemoria() {
         ${c.sugestao ? `<div><div class="suave">O bot tinha sugerido</div><div class="caixa">${esc(c.sugestao)}</div></div>` : ''}
         <div><div class="suave">Resposta certa</div><div class="caixa" style="background:var(--verde-claro)">${esc(c.resposta)}</div></div>
       </div>
-      <label for="mlic-${c.id}">Lição (regra que vale para todas as perguntas)</label>
+      <div class="linha"><label for="mesc-${c.id}" style="margin:0">Vale para</label>
+        <select id="mesc-${c.id}" style="width:auto" onchange="mudarEscopo(${c.id}, this.value)">
+          <option value="geral" ${c.escopo === 'geral' ? 'selected' : ''}>Qualquer pergunta sobre o tema</option>
+          <option value="anuncio" ${c.escopo === 'anuncio' ? 'selected' : ''} ${c.itemId ? '' : 'disabled'}>Só este anúncio${c.itemId ? ` (${esc(c.itemId)})` : ''}</option>
+          <option value="produto" ${c.escopo === 'produto' ? 'selected' : ''} ${c.sku ? '' : 'disabled'}>Este produto${c.sku ? ` (SKU ${esc(c.sku)})` : ''}</option>
+        </select></div>
+      <label for="mlic-${c.id}">Lição (regra que o bot segue nas perguntas para as quais a correção vale)</label>
       <div class="linha"><input id="mlic-${c.id}" style="flex:1;width:auto" maxlength="500" value="${esc(c.licao || '')}" placeholder="opcional">
         <button class="acao" onclick="salvarLicao(${c.id}, this)">Salvar lição</button></div>
       <div class="linha"><button class="acao" onclick="alternarCorrecao(${c.id}, ${!c.ativa})">${c.ativa ? 'Desativar' : 'Reativar'}</button>
@@ -801,6 +910,9 @@ async function salvarLicao(id, btn) {
   await ocupado(btn, 'Salvando…', async () => {
     try { await api(`/api/correcoes/${id}`, { metodo: 'PUT', corpo: { licao: $(`#mlic-${id}`).value } }); toast('Lição salva.'); } catch (e) { toast(e.message); }
   });
+}
+async function mudarEscopo(id, escopo) {
+  try { await api(`/api/correcoes/${id}`, { metodo: 'PUT', corpo: { escopo } }); toast('Alcance da correção atualizado.'); mostrar('memoria', true); } catch (e) { toast(e.message); }
 }
 async function alternarCorrecao(id, ativa) {
   try { await api(`/api/correcoes/${id}`, { metodo: 'PUT', corpo: { ativa } }); mostrar('memoria', true); } catch (e) { toast(e.message); }

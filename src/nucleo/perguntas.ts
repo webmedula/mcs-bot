@@ -3,6 +3,8 @@ import { classificarAssunto } from './assuntos';
 import { primeiroNomeDoApelido } from './comprador';
 import type { PerguntaExterna, Plataforma, StatusPergunta } from './tipos';
 
+export type VotoSugestao = 'bom' | 'ruim';
+
 export interface Pergunta {
   id: number;
   plataforma: Plataforma;
@@ -22,6 +24,8 @@ export interface Pergunta {
   sugestaoConfianca: number | null;
   sugestaoMotivo: string | null;
   sugestaoEm: string | null;
+  /** Joinha no painel: a sugestão estava boa (bom) ou não (ruim). Zera quando a sugestão muda. */
+  sugestaoVoto: VotoSugestao | null;
   atualizadoEm: string;
   /** Na aba Respondidas: qual resposta era melhor (gobots | bot | iguais). */
   avaliacao: string | null;
@@ -35,6 +39,8 @@ export interface Pergunta {
   compradorNome?: string | null;
   /** Vem do JOIN com produtos: situação do anúncio (active, paused, closed, etc). */
   anuncioSituacao?: string | null;
+  /** SKU do anúncio, tirado da ficha guardada. */
+  itemSku?: string | null;
 }
 
 function daLinha(l: any): Pergunta {
@@ -57,6 +63,7 @@ function daLinha(l: any): Pergunta {
     sugestaoConfianca: l.sugestao_confianca != null ? Number(l.sugestao_confianca) : null,
     sugestaoMotivo: l.sugestao_motivo ?? null,
     sugestaoEm: l.sugestao_em ?? null,
+    sugestaoVoto: l.sugestao_voto === 'bom' || l.sugestao_voto === 'ruim' ? l.sugestao_voto : null,
     atualizadoEm: l.atualizado_em,
     avaliacao: l.avaliacao ?? null,
     arquivada: Boolean(l.arquivada),
@@ -65,10 +72,12 @@ function daLinha(l: any): Pergunta {
     compradorApelido: l.comprador_apelido ?? null,
     compradorNome: primeiroNomeDoApelido(l.comprador_apelido),
     anuncioSituacao: l.anuncio_situacao ?? null,
+    itemSku: l.item_sku ?? null,
   };
 }
 
-const SELECT = `SELECT p.*, pr.titulo AS item_titulo, pr.permalink AS permalink, pr.situacao AS anuncio_situacao, cp.apelido AS comprador_apelido
+const SELECT = `SELECT p.*, pr.titulo AS item_titulo, pr.permalink AS permalink, pr.situacao AS anuncio_situacao,
+  CASE WHEN json_valid(pr.ficha_json) THEN json_extract(pr.ficha_json, '$.sku') END AS item_sku, cp.apelido AS comprador_apelido
   FROM perguntas p LEFT JOIN produtos pr ON pr.plataforma = p.plataforma AND pr.item_id = p.item_id
   LEFT JOIN compradores cp ON cp.plataforma = p.plataforma AND cp.comprador_id = p.comprador_id`;
 
@@ -173,9 +182,23 @@ export function gravarSugestao(id: number, s: Sugestao): void {
   banco()
     .prepare(
       `UPDATE perguntas SET sugestao = ?, sugestao_origem = ?, sugestao_pronta_id = ?, sugestao_confianca = ?,
-         sugestao_motivo = ?, sugestao_em = ?, atualizado_em = ? WHERE id = ?`,
+         sugestao_motivo = ?, sugestao_em = ?, atualizado_em = ?, sugestao_voto = NULL WHERE id = ?`,
     )
     .run(s.texto, s.origem, s.prontaId, s.confianca, s.motivo, agora(), agora(), id);
+}
+
+/** Joinha na sugestão: bom, ruim ou null (tira o voto). */
+export function gravarVoto(id: number, voto: VotoSugestao | null): void {
+  banco().prepare('UPDATE perguntas SET sugestao_voto = ?, atualizado_em = ? WHERE id = ?').run(voto, agora(), id);
+}
+
+/** Placar das sugestões avaliadas com joinha. */
+export function contarVotos(): { bom: number; ruim: number } {
+  const out = { bom: 0, ruim: 0 };
+  for (const l of banco().prepare(`SELECT sugestao_voto AS v, COUNT(*) AS n FROM perguntas WHERE sugestao_voto IS NOT NULL GROUP BY v`).all() as any[]) {
+    if (l.v === 'bom' || l.v === 'ruim') out[l.v as VotoSugestao] = Number(l.n);
+  }
+  return out;
 }
 
 export function marcarRespondida(id: number, texto: string, por: 'painel' | 'mcs-bot' | 'externo'): void {
