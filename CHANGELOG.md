@@ -7,6 +7,8 @@
 - **Outras perguntas da mesma pessoa** (em qualquer anúncio) entram no pedido à IA como contexto, por exemplo o carro que ela já citou.
 - Painel: cada pendente mostra quem perguntou e, entre parênteses, o nome que vai na saudação.
 - A memória de correções tira "Olá, Maria!" junto com a saudação, para o nome não virar exemplo para outra pessoa.
+- **Anúncio fora do ar.** A cada conferência o bot lê a situação dos anúncios das pendentes no ML (em lotes de 20). Pergunta de anúncio pausado, finalizado ou apagado sai de "Recentes" e do contador do menu e vai para a aba **"Anúncio fora do ar"**, com o botão "Arquivar as N fora do ar". Ela não ganha sugestão automática (não gasta IA); se o anúncio voltar ao ar, volta para a lista e ganha sugestão.
+- Rota `POST /api/perguntas/arquivar-fora-do-ar`.
 
 ## 0.9.0 (2026-11-12)
 

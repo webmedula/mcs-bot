@@ -8,7 +8,7 @@ import { lerToken } from '../conectores/mercadolivre/oauth';
 import { descricaoDaIa } from '../ia/provedor';
 import { classificarAssunto, nomeDoAssunto } from '../nucleo/assuntos';
 import { LISTA_DE_ASSUNTOS, perguntasFrequentes } from '../nucleo/frequentes';
-import { arquivarAntigas, arquivarPergunta, contarPorStatus, ehAntiga, lerPergunta, listarPerguntas, tempoDeResposta, type FiltroPerguntas } from '../nucleo/perguntas';
+import { arquivarAntigas, arquivarForaDoAr, arquivarPergunta, contarPorStatus, ehAntiga, lerPergunta, listarPerguntas, tempoDeResposta, type FiltroPerguntas } from '../nucleo/perguntas';
 import {
   apagarRespostaPronta,
   atualizarRespostaPronta,
@@ -57,8 +57,13 @@ function estadoGeral() {
     historico: estadoDoHistorico(),
     respostasProntas: listarRespostasProntas().filter((r) => r.ativa).length,
     perguntaAntigaDias: config.perguntaAntigaDias,
-    // O contador do menu mostra só as recentes (as antigas ficam numa aba à parte).
-    pendentesRecentes: (banco().prepare(`SELECT criada_em FROM perguntas WHERE status = 'pendente' AND arquivada = 0`).all() as any[])
+    // O contador do menu mostra só as recentes (as antigas ficam numa aba à parte), excluindo anúncios fora do ar.
+    pendentesRecentes: (banco()
+      .prepare(
+        `SELECT p.criada_em FROM perguntas p LEFT JOIN produtos pr ON pr.plataforma = p.plataforma AND pr.item_id = p.item_id
+         WHERE p.status = 'pendente' AND p.arquivada = 0 AND (pr.situacao IS NULL OR pr.situacao = 'active')`,
+      )
+      .all() as any[])
       .filter((l) => !ehAntiga(l.criada_em, config.perguntaAntigaDias)).length,
     correcoes: contarCorrecoes(),
   };
@@ -150,6 +155,7 @@ export async function rotasApi(app: FastifyInstance): Promise<void> {
       return { ok: true };
     });
     p.post('/api/perguntas/arquivar-antigas', async () => ({ arquivadas: arquivarAntigas(config.perguntaAntigaDias) }));
+    p.post('/api/perguntas/arquivar-fora-do-ar', async () => ({ arquivadas: arquivarForaDoAr() }));
 
     // Memória de correções
     p.get('/api/correcoes', async () => listarCorrecoes());

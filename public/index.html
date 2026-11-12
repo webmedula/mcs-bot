@@ -416,15 +416,25 @@ async function arquivarAntigas(btn, n) {
     catch (e) { toast(e.message); }
   });
 }
+async function arquivarForaDoAr(btn, n) {
+  if (!confirm(`Arquivar as ${n} perguntas cujo anúncio está fora do ar? Elas saem da lista do painel, mas continuam sem resposta no Mercado Livre. Dá para desarquivar depois.`)) return;
+  await ocupado(btn, 'Arquivando…', async () => {
+    try { const r = await api('/api/perguntas/arquivar-fora-do-ar', { metodo: 'POST' }); toast(`${r.arquivadas} pergunta(s) arquivada(s).`); vistaPend = 'recentes'; await mostrar('pendentes', true); }
+    catch (e) { toast(e.message); }
+  });
+}
 async function telaPendentes() {
   const dias = estado.perguntaAntigaDias || 30;
   const limite = Date.now() - dias * 86400000;
   const naoArquivadas = await api('/api/perguntas?status=pendente&limite=500');
-  const recentes = naoArquivadas.filter((p) => !p.criadaEm || Date.parse(p.criadaEm) >= limite);
-  const antigas = naoArquivadas.filter((p) => p.criadaEm && Date.parse(p.criadaEm) < limite);
+  const foraDoAr = naoArquivadas.filter((p) => p.anuncioSituacao && p.anuncioSituacao !== 'active');
+  const emAr = naoArquivadas.filter((p) => !p.anuncioSituacao || p.anuncioSituacao === 'active');
+  const recentes = emAr.filter((p) => !p.criadaEm || Date.parse(p.criadaEm) >= limite);
+  const antigas = emAr.filter((p) => p.criadaEm && Date.parse(p.criadaEm) < limite);
   const nArq = estado.perguntas.arquivada || 0;
   if (vistaPend === 'arquivadas' && !nArq) vistaPend = 'recentes';
-  const todas = vistaPend === 'arquivadas' ? await api('/api/perguntas?status=pendente&arquivadas=1&limite=500') : vistaPend === 'antigas' ? antigas : recentes;
+  if (vistaPend === 'fora-do-ar' && !foraDoAr.length) vistaPend = 'recentes';
+  const todas = vistaPend === 'arquivadas' ? await api('/api/perguntas?status=pendente&arquivadas=1&limite=500') : vistaPend === 'fora-do-ar' ? foraDoAr : vistaPend === 'antigas' ? antigas : recentes;
   const envio = estado.mercadoLivre.envioHabilitado;
   let h = avisosGerais();
   const maisAntiga = todas.reduce((m, p) => (!m || p.criadaEm < m ? p.criadaEm : m), null);
@@ -443,18 +453,23 @@ async function telaPendentes() {
   h += `<div class="filtros" style="margin-bottom:8px">
     <button class="${vistaPend === 'recentes' ? 'ativo' : ''}" onclick="mudarVistaPend('recentes')">Recentes, até ${dias} dias (${recentes.length})</button>
     ${antigas.length ? `<button class="${vistaPend === 'antigas' ? 'ativo' : ''}" onclick="mudarVistaPend('antigas')">Antigas (${antigas.length})</button>` : ''}
+    ${foraDoAr.length ? `<button class="${vistaPend === 'fora-do-ar' ? 'ativo' : ''}" onclick="mudarVistaPend('fora-do-ar')">Anúncio fora do ar (${foraDoAr.length})</button>` : ''}
     ${nArq ? `<button class="${vistaPend === 'arquivadas' ? 'ativo' : ''}" onclick="mudarVistaPend('arquivadas')">Arquivadas (${nArq})</button>` : ''}
   </div>`;
   if (vistaPend === 'antigas' && antigas.length) {
     h += `<div class="aviso amarelo">Perguntas com mais de ${dias} dias, muitas de anúncios parados. Elas não ganham sugestão automática (para não gastar IA). Responda as que valerem a pena, ou tire todas da lista:
       <button class="acao" style="margin-left:8px" onclick="arquivarAntigas(this, ${antigas.length})">Arquivar as ${antigas.length} antigas</button></div>`;
   }
+  if (vistaPend === 'fora-do-ar' && foraDoAr.length) {
+    h += `<div class="aviso amarelo">Perguntas de anúncios pausados, finalizados ou apagados. O Mercado Livre não deixa responder enquanto o anúncio está fora do ar, então elas não ganham sugestão. Se o anúncio voltar, a pergunta volta sozinha para "Recentes". Para tirar todas da lista:
+      <button class="acao" style="margin-left:8px" onclick="arquivarForaDoAr(this, ${foraDoAr.length})">Arquivar as ${foraDoAr.length} fora do ar</button></div>`;
+  }
   h += `<div class="cartao"><div class="linha entre"><div>
-      <b>${lista.length} pergunta(s) ${vistaPend === 'arquivadas' ? 'arquivada(s)' : vistaPend === 'antigas' ? 'antiga(s)' : 'esperando resposta'}</b>
+      <b>${lista.length} pergunta(s) ${vistaPend === 'arquivadas' ? 'arquivada(s)' : vistaPend === 'fora-do-ar' ? 'fora do ar' : vistaPend === 'antigas' ? 'antiga(s)' : 'esperando resposta'}</b>
       <p class="explica" style="margin:4px 0 0">Cada pergunta já vem com uma sugestão: uma resposta pronta, quando alguma casa, ou a IA usando a ficha do anúncio.
       ${envio ? 'Revise e clique em Enviar.' : '<b>O envio está desligado</b> (o Gobots ainda responde): por enquanto o sistema só sugere, para compararmos.'}</p>
     </div><button class="acao" onclick="sincronizar(this)">Buscar agora</button></div></div>`;
-  if (!todas.length) return h + `<div class="vazio"><b>Tudo respondido</b>Nenhuma pergunta recente esperando. O sistema busca novas a cada poucos minutos.${antigas.length ? ` Há ${antigas.length} antiga(s) na aba "Antigas".` : ''}</div>`;
+  if (!todas.length) return h + `<div class="vazio"><b>Tudo respondido</b>Nenhuma pergunta recente esperando. O sistema busca novas a cada poucos minutos.${antigas.length ? ` Há ${antigas.length} antiga(s) na aba "Antigas".` : ''}${foraDoAr.length ? ` Há ${foraDoAr.length} com anúncio fora do ar na aba "Anúncio fora do ar".` : ''}</div>`;
   const chaves = Object.keys(porAssunto);
   if (chaves.length > 1) {
     h += `<div class="filtros"><button class="${filtroAssunto ? '' : 'ativo'}" onclick="filtrarAssunto('')">Todas (${todas.length})</button>`;
