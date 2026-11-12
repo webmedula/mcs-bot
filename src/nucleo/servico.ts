@@ -1,3 +1,4 @@
+import { conhecerComprador } from './comprador';
 import { atualizarCorrecao, correcaoDaPergunta, ehCorrecao, salvarCorrecao } from './correcoes';
 import { banco, gravarEstado, lerEstado, agora } from '../banco';
 import { config } from '../config';
@@ -16,7 +17,7 @@ import {
   salvarPergunta,
   type Pergunta,
 } from './perguntas';
-import { gerarSugestao, sugerirComPronta } from './sugestao';
+import { gerarSugestao, saudacaoPara, sugerirComPronta } from './sugestao';
 import { contarUso } from './respostasProntas';
 import type { FichaDoProduto, PerguntaExterna, Plataforma } from './tipos';
 
@@ -39,10 +40,40 @@ async function fichaSemErro(p: Pergunta): Promise<FichaDoProduto | null> {
   }
 }
 
+/** Troca "Olá!" por "Olá, Maria!" no começo da sugestão (sem chamar a IA de novo). */
+export function colocarNomeNaSugestao(p: Pergunta, nome: string): void {
+  const saud = config.saudacao.trim();
+  if (!p.sugestao || !saud || !config.respostaComNome || !p.sugestao.startsWith(saud)) return;
+  const nova = saudacaoPara(nome) + p.sugestao.slice(saud.length);
+  banco().prepare('UPDATE perguntas SET sugestao = ? WHERE id = ?').run(nova, p.id);
+}
+
+const MOTIVO_FORA_DO_AR = 'Anúncio fora do ar';
+
+function nomeDaSituacao(s: string): string {
+  return ({ paused: 'pausado', closed: 'finalizado', under_review: 'em revisão', inactive: 'inativo' } as Record<string, string>)[s] ?? s;
+}
+
 /** Grava a pergunta e, se estiver pendente sem sugestão, monta a sugestão. */
 export async function processarPergunta(e: PerguntaExterna): Promise<Pergunta> {
   const { pergunta } = salvarPergunta(e);
-  if (pergunta.status === 'pendente' && !pergunta.sugestaoEm) {
+  // Pendente que já tinha sugestão (de antes da versão com nome): só põe o nome na saudação.
+  if (pergunta.status === 'pendente' && pergunta.sugestaoEm && !pergunta.compradorApelido) {
+    const c = await conhecerComprador(pergunta);
+    if (c?.primeiroNome) colocarNomeNaSugestao(pergunta, c.primeiroNome);
+  }
+  const foraDoAr = Boolean(pergunta.anuncioSituacao && pergunta.anuncioSituacao !== 'active');
+  // O anúncio voltou ao ar: a pergunta que tinha ficado sem sugestão ganha uma agora.
+  const voltou = !foraDoAr && pergunta.sugestaoOrigem === 'nenhuma' && (pergunta.sugestaoMotivo ?? '').startsWith(MOTIVO_FORA_DO_AR);
+  if (pergunta.status === 'pendente' && (!pergunta.sugestaoEm || voltou)) {
+    // Anúncio pausado ou finalizado: o ML não deixa responder, então não gasta IA.
+    if (foraDoAr) {
+      gravarSugestao(pergunta.id, {
+        texto: null, origem: 'nenhuma', prontaId: null, confianca: null,
+        motivo: `${MOTIVO_FORA_DO_AR} no Mercado Livre (${nomeDaSituacao(pergunta.anuncioSituacao!)}): sem sugestão automática.`,
+      });
+      return lerPergunta(pergunta.id)!;
+    }
     // Pergunta muito velha (de anúncio parado, por exemplo) não gasta IA sozinha.
     if (ehAntiga(pergunta.criadaEm, config.perguntaAntigaDias)) {
       gravarSugestao(pergunta.id, {
@@ -51,6 +82,7 @@ export async function processarPergunta(e: PerguntaExterna): Promise<Pergunta> {
       });
       return lerPergunta(pergunta.id)!;
     }
+    await conhecerComprador(pergunta);
     const ficha = await fichaSemErro(pergunta);
     await gerarSugestao(pergunta.id, ficha);
   }
@@ -60,6 +92,7 @@ export async function processarPergunta(e: PerguntaExterna): Promise<Pergunta> {
 export async function refazerSugestao(id: number): Promise<Pergunta> {
   const p = lerPergunta(id);
   if (!p) throw new Error('Pergunta não encontrada.');
+  await conhecerComprador(p);
   const ficha = await fichaSemErro(p);
   await gerarSugestao(id, ficha);
   return lerPergunta(id)!;
@@ -114,6 +147,23 @@ export async function sincronizarPendentes(plataforma: Plataforma = 'mercadolivr
   try {
     const lista = await c.buscarPendentes();
     r.pendentes = lista.length;
+    // Pega a situação de todos os anúncios de uma vez (em lotes de 20).
+    const situacoes: Record<string, string> = {};
+    if (c.situacaoDosAnuncios) {
+      const itemIds = [...new Set(lista.map((e) => e.itemId).filter((id): id is string => Boolean(id)))];
+      if (itemIds.length > 0) {
+        Object.assign(situacoes, await c.situacaoDosAnuncios(itemIds));
+      }
+    }
+    // Grava a situação no banco (mesmo que vazia: ON CONFLICT cuida).
+    const db = banco();
+    const st = db.prepare(
+      `INSERT INTO produtos (plataforma, item_id, atualizado_em, situacao, situacao_em) VALUES (?, ?, ?, ?, ?)
+       ON CONFLICT(plataforma, item_id) DO UPDATE SET situacao = excluded.situacao, situacao_em = excluded.situacao_em`,
+    );
+    for (const [itemId, situacao] of Object.entries(situacoes)) {
+      st.run(plataforma, itemId, '1970-01-01T00:00:00.000Z', situacao, agora());
+    }
     for (const e of lista) {
       const antes = lerPerguntaExterna(plataforma, e.idExterno);
       await processarPergunta(e);

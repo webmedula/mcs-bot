@@ -46,6 +46,8 @@ export interface FichaDoProduto {
   /** Veículos compatíveis, em texto. null = não foi possível ler; [] = anúncio sem tabela. */
   compatibilidades: string[] | null;
   sku: string | null;
+  /** Situação do anúncio na plataforma (active, paused, closed...), quando lida. */
+  situacao?: string | null;
 }
 
 export interface Conector {
@@ -58,4 +60,8 @@ export interface Conector {
   buscarHistorico(max: number, aoAvancar: (pagina: PerguntaExterna[]) => void): Promise<{ lidas: number; parouPor: string }>;
   fichaDoProduto(itemId: string): Promise<FichaDoProduto>;
   responder(idExterno: string, texto: string): Promise<void>;
+  /** Apelido público de quem perguntou (o ML não mostra o nome de verdade antes da compra). */
+  apelidoDoComprador?(compradorId: string): Promise<string | null>;
+  /** Situação de cada anúncio (active, paused, closed...). Anúncio fora do ar não aceita resposta. */
+  situacaoDosAnuncios?(itemIds: string[]): Promise<Record<string, string>>;
 }

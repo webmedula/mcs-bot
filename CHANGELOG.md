@@ -1,5 +1,15 @@
 # Changelog
 
+## 0.10.0 (2026-11-12)
+
+- **Nome de quem pergunta na resposta.** O bot lê o apelido público do comprador no ML (`/users/{id}`, uma vez por pessoa) e tira dele o primeiro nome quando é um nome comum ("MARIA.SILVA82" → Maria, "JOAOPAULO_RS" → João). A saudação vira "Olá, Maria!". Apelido sem cara de nome ("AUTOPECAS2020") fica no "Olá!" de sempre. Desliga com `RESPOSTA_COM_NOME=false`.
+- Vale para respostas prontas e IA. Pendentes que já tinham sugestão ganham o nome na saudação sem chamar a IA de novo.
+- **Outras perguntas da mesma pessoa** (em qualquer anúncio) entram no pedido à IA como contexto, por exemplo o carro que ela já citou.
+- Painel: cada pendente mostra quem perguntou e, entre parênteses, o nome que vai na saudação.
+- A memória de correções tira "Olá, Maria!" junto com a saudação, para o nome não virar exemplo para outra pessoa.
+- **Anúncio fora do ar.** A cada conferência o bot lê a situação dos anúncios das pendentes no ML (em lotes de 20). Pergunta de anúncio pausado, finalizado ou apagado sai de "Recentes" e do contador do menu e vai para a aba **"Anúncio fora do ar"**, com o botão "Arquivar as N fora do ar". Ela não ganha sugestão automática (não gasta IA); se o anúncio voltar ao ar, volta para a lista e ganha sugestão.
+- Rota `POST /api/perguntas/arquivar-fora-do-ar`.
+
 ## 0.9.0 (2026-11-12)
 
 - **Perguntas antigas separadas.** Em Pendentes, as abas "Recentes (até 30 dias)", "Antigas" e "Arquivadas". O contador do menu conta só as recentes, e a lista mostra as mais novas primeiro.

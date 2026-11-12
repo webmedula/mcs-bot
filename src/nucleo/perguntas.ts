@@ -1,5 +1,6 @@
 import { agora, banco } from '../banco';
 import { classificarAssunto } from './assuntos';
+import { primeiroNomeDoApelido } from './comprador';
 import type { PerguntaExterna, Plataforma, StatusPergunta } from './tipos';
 
 export interface Pergunta {
@@ -29,6 +30,11 @@ export interface Pergunta {
   /** Vem do JOIN com produtos. */
   itemTitulo?: string | null;
   permalink?: string | null;
+  /** Vem do JOIN com compradores: apelido público e o primeiro nome tirado dele. */
+  compradorApelido?: string | null;
+  compradorNome?: string | null;
+  /** Vem do JOIN com produtos: situação do anúncio (active, paused, closed, etc). */
+  anuncioSituacao?: string | null;
 }
 
 function daLinha(l: any): Pergunta {
@@ -56,11 +62,15 @@ function daLinha(l: any): Pergunta {
     arquivada: Boolean(l.arquivada),
     itemTitulo: l.item_titulo ?? null,
     permalink: l.permalink ?? null,
+    compradorApelido: l.comprador_apelido ?? null,
+    compradorNome: primeiroNomeDoApelido(l.comprador_apelido),
+    anuncioSituacao: l.anuncio_situacao ?? null,
   };
 }
 
-const SELECT = `SELECT p.*, pr.titulo AS item_titulo, pr.permalink AS permalink
-  FROM perguntas p LEFT JOIN produtos pr ON pr.plataforma = p.plataforma AND pr.item_id = p.item_id`;
+const SELECT = `SELECT p.*, pr.titulo AS item_titulo, pr.permalink AS permalink, pr.situacao AS anuncio_situacao, cp.apelido AS comprador_apelido
+  FROM perguntas p LEFT JOIN produtos pr ON pr.plataforma = p.plataforma AND pr.item_id = p.item_id
+  LEFT JOIN compradores cp ON cp.plataforma = p.plataforma AND cp.comprador_id = p.comprador_id`;
 
 /**
  * Grava ou atualiza a pergunta vinda da plataforma. Nunca apaga a sugestão. Se ela estava pendente
@@ -203,6 +213,19 @@ export function arquivarAntigas(dias: number): number {
   const st = banco().prepare('UPDATE perguntas SET arquivada = 1, atualizado_em = ? WHERE id = ?');
   for (const id of ids) st.run(agora(), id);
   return ids.length;
+}
+
+/** Arquiva de uma vez as pendentes cujo anúncio está fora do ar. Devolve quantas. */
+export function arquivarForaDoAr(): number {
+  const linhas = banco()
+    .prepare(
+      `SELECT p.id FROM perguntas p LEFT JOIN produtos pr ON pr.plataforma = p.plataforma AND pr.item_id = p.item_id
+       WHERE p.status = 'pendente' AND p.arquivada = 0 AND pr.situacao IS NOT NULL AND pr.situacao != 'active'`,
+    )
+    .all() as any[];
+  const st = banco().prepare('UPDATE perguntas SET arquivada = 1, atualizado_em = ? WHERE id = ?');
+  for (const l of linhas) st.run(agora(), l.id);
+  return linhas.length;
 }
 
 /** Tempo até a resposta (minutos), nas respondidas dos últimos N dias. */

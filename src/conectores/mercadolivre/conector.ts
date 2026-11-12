@@ -7,7 +7,7 @@ import { lerToken } from './oauth';
 /**
  * CONECTOR DO MERCADO LIVRE: traduz a API do ML para o formato do núcleo.
  * Rotas usadas: /questions/search, /questions/{id}, /answers, /items/{id}, /items/{id}/description,
- * /items/{id}/compatibilities e /users/{id}/items/search.
+ * /items/{id}/compatibilities, /users/{id}/items/search e /users/{id} (apelido de quem pergunta).
  */
 
 export function statusDoMl(s: string | undefined): StatusPergunta {
@@ -193,6 +193,7 @@ export async function lerFichaDoMl(itemId: string): Promise<FichaDoProduto> {
     itemId,
     titulo: texto(item?.title),
     permalink: texto(item?.permalink),
+    situacao: texto(item?.status),
     ...preco,
     precoLidoEm: agora(),
     condicao: item?.condition === 'new' ? 'novo' : item?.condition === 'used' ? 'usado' : texto(item?.condition),
@@ -230,10 +231,11 @@ export async function fichaComCache(itemId: string, forcar = false): Promise<Fic
   }
   ficha = await lerFichaDoMl(itemId);
   db.prepare(
-    `INSERT INTO produtos (plataforma, item_id, titulo, permalink, ficha_json, atualizado_em) VALUES ('mercadolivre', ?, ?, ?, ?, ?)
+    `INSERT INTO produtos (plataforma, item_id, titulo, permalink, ficha_json, atualizado_em, situacao, situacao_em) VALUES ('mercadolivre', ?, ?, ?, ?, ?, ?, ?)
      ON CONFLICT(plataforma, item_id) DO UPDATE SET titulo = excluded.titulo, permalink = excluded.permalink,
-       ficha_json = excluded.ficha_json, atualizado_em = excluded.atualizado_em`,
-  ).run(itemId, ficha.titulo, ficha.permalink, JSON.stringify(ficha), agora());
+       ficha_json = excluded.ficha_json, atualizado_em = excluded.atualizado_em,
+       situacao = COALESCE(excluded.situacao, situacao), situacao_em = COALESCE(excluded.situacao_em, situacao_em)`,
+  ).run(itemId, ficha.titulo, ficha.permalink, JSON.stringify(ficha), agora(), ficha.situacao ?? null, ficha.situacao ? agora() : null);
   return ficha;
 }
 
@@ -310,5 +312,30 @@ export const conectorMercadoLivre: Conector = {
 
   async responder(idExterno, textoResposta) {
     await ml('/answers', { metodo: 'POST', corpo: { question_id: Number(idExterno), text: textoResposta } });
+  },
+
+  async situacaoDosAnuncios(itemIds) {
+    const out: Record<string, string> = {};
+    const ids = [...new Set(itemIds.filter(Boolean))];
+    // Multiget do ML: até 20 anúncios por chamada.
+    for (let i = 0; i < ids.length; i += 20) {
+      const lote = ids.slice(i, i + 20);
+      try {
+        const r: any[] = await ml(`/items?ids=${lote.join(',')}&attributes=id,status`);
+        for (const x of r ?? []) {
+          if (x?.code === 200 && x.body?.id && x.body?.status) out[String(x.body.id)] = String(x.body.status);
+          // 404: anúncio apagado. Conta como fora do ar.
+          else if (x?.code === 404 && x.body?.id) out[String(x.body.id)] = 'closed';
+        }
+      } catch (err: any) {
+        logger.warn(`[ML] situação dos anúncios falhou: ${err?.message || err}`);
+      }
+    }
+    return out;
+  },
+
+  async apelidoDoComprador(compradorId) {
+    const u: any = await ml(`/users/${encodeURIComponent(compradorId)}`);
+    return u?.nickname ? String(u.nickname) : null;
   },
 };
