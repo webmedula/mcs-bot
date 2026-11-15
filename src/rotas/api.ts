@@ -18,6 +18,7 @@ import {
 } from '../nucleo/respostasProntas';
 import { carregarProntasIniciais } from '../nucleo/prontasIniciais';
 import { visaoGeral } from '../nucleo/visaoGeral';
+import { periodoValido, saudeDosProdutos } from '../nucleo/saudeProdutos';
 import { apagarCorrecao, atualizarCorrecao, contarCorrecoes, escopoValido, listarCorrecoes, salvarCorrecaoAvulsa } from '../nucleo/correcoes';
 import { gravarRegrasDaLoja, lerRegrasDaLoja, REGRAS_PADRAO } from '../nucleo/regrasDaLoja';
 import {
@@ -276,6 +277,16 @@ export async function rotasApi(app: FastifyInstance): Promise<void> {
         origemDaSugestao: x.sugestaoOrigem,
       }));
       return { ...estadoGeral(), pendentes };
+    });
+    // 0.12.0: perguntas do período por anúncio (assuntos e as que se repetem), para o relatório de saúde do produto.
+    p.get('/api/saude-produtos', async (req, reply) => {
+      const q = req.query as { desde?: string; ate?: string };
+      const periodo = periodoValido(q.desde, q.ate);
+      if (!periodo) {
+        reply.code(400);
+        return { mensagem: 'Período inválido. Use ?desde=AAAA-MM-DD&ate=AAAA-MM-DD.' };
+      }
+      return saudeDosProdutos(periodo.desde, periodo.ate);
     });
   });
 }

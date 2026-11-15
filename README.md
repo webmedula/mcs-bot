@@ -47,6 +47,8 @@ Push na `main` publica `ghcr.io/webmedula/mcs-bot:latest` (GitHub Actions). No E
 
 `GET /api/estado` com `x-api-key: BOT_API_KEY`: contadores, tempos de resposta e pendentes (para o Gerente IA).
 
+`GET /api/saude-produtos?desde=AAAA-MM-DD&ate=AAAA-MM-DD` com a mesma chave (0.12.0): perguntas do período por anúncio, por assunto e as que se repetem, para o relatório mensal de saúde do produto do Gerente IA.
+
 Diagnóstico (logado no painel): `GET /debug/ml/item/MLB...` mostra o anúncio cru e a ficha traduzida.
 
 ## Desenvolvimento
