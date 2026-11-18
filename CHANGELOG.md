@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.12.0 (2026-11-15)
+
+- **Saúde do produto.** Nova leitura para o Gerente IA, `GET /api/saude-produtos?desde=AAAA-MM-DD&ate=AAAA-MM-DD` (com `x-api-key` = `BOT_API_KEY`): perguntas recebidas no período por anúncio, com o SKU (da ficha), a contagem por assunto e os grupos de perguntas parecidas que se repetem no mesmo anúncio. Pergunta repetida sobre medida, compatibilidade ou o que vem no kit costuma ser informação que falta no anúncio. O **mcs-gerente** (v1.6) junta isso com as reclamações da Central e a nota do anúncio num relatório mensal por produto. Não leva quem perguntou.
+
 ## 0.11.0 (2026-11-12)
 
 - **Painel lateral "Treinar resposta".** Em qualquer pergunta (Pendentes, Respondidas e Frequentes) um botão abre um painel ao lado com o anúncio (título, MLB e SKU), a pergunta, a sugestão do bot, a resposta certa para editar, o "Vale para" e a regra que o bot aprende. Substitui o "Ensinar ao bot" que abria embaixo de cada pergunta; "Virar resposta pronta" fica dentro do painel.
